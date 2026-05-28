@@ -198,7 +198,7 @@ const getReports = async (req, res) => {
   }
 };
 
-const generateRegistersForPeriod = async (start, end, showScientificName) => {
+const generateRegistersForPeriod = async (start, end, showScientificName, showSubtype) => {
   // Form 44a: Intake (Incoming Logs)
   const logsIntake = await prisma.logInventory.findMany({
     where: { incomingBatch: { date: { gte: start, lte: end } } },
@@ -211,10 +211,20 @@ const generateRegistersForPeriod = async (start, end, showScientificName) => {
     if ((showScientificName === 'true' || showScientificName === true) && log.timberType?.scientificName) {
       typeName = log.timberType.scientificName;
     }
+    if (showSubtype === 'true' || showSubtype === true) {
+      const src = log.incomingBatch.source || 'Unknown';
+      const stype = log.incomingBatch.sourceType || 'Unknown';
+      typeName = `${typeName} - ${src} (${stype})`;
+    }
+
+    const pName = log.incomingBatch.party?.name || '';
+    const pAddr = log.incomingBatch.party?.address || '';
 
     return {
       slNo: index + 1,
-      partyNameAddress: `${log.incomingBatch.party?.name || ''}\n${log.incomingBatch.party?.address || ''}`.trim(),
+      partyNameAddress: [pName, pAddr].filter(Boolean).join(', '),
+      partyName: pName,
+      partyAddress: pAddr,
       source: log.incomingBatch.source || '',
       dateOfReceipt: log.incomingBatch.date,
       permitNo: log.incomingBatch.permitNo,
@@ -229,16 +239,58 @@ const generateRegistersForPeriod = async (start, end, showScientificName) => {
   // Form 44b: Out-turn (Outgoing Sizes)
   const sizesOutturn = await prisma.outgoingSawnSize.findMany({
     where: { outgoingBatch: { date: { gte: start, lte: end } } },
-    include: { outgoingBatch: true, timberType: true },
+    include: { 
+      outgoingBatch: {
+        include: {
+          party: true,
+          logUsages: { include: { logInventory: { include: { incomingBatch: true } } } },
+          sizeUsages: { include: { sawnSizeInventory: { include: { incomingBatch: true } } } }
+        }
+      }, 
+      timberType: true 
+    },
     orderBy: { outgoingBatch: { date: 'asc' } }
   });
 
-  const form44b = sizesOutturn.map(size => {
+  const form44b = sizesOutturn.map((size, index) => {
+    let typeName = size.timberType?.name || '';
+    if ((showScientificName === 'true' || showScientificName === true) && size.timberType?.scientificName) {
+      typeName = size.timberType.scientificName;
+    }
+
+    const incomingBatches = [
+      ...size.outgoingBatch.logUsages.map(u => u.logInventory.incomingBatch),
+      ...size.outgoingBatch.sizeUsages.map(u => u.sawnSizeInventory.incomingBatch)
+    ];
+
+    if (showSubtype === 'true' || showSubtype === true) {
+      const sources = [...new Set(incomingBatches.map(b => `${b.source || 'Unknown'} (${b.sourceType || 'Unknown'})`))];
+      if (sources.length > 0) {
+        typeName = `${typeName} - ${sources.join(', ')}`;
+      }
+    }
+
+    const incomingPermitNos = [...new Set(incomingBatches.map(b => b.permitNo))].join('\n');
+
+    const pName = size.outgoingBatch.party?.name || '';
+    const pAddr = size.outgoingBatch.party?.address || '';
+
+    const baseData = {
+      slNo: index + 1, // Add slNo to match logic if needed
+      timberType: typeName,
+      dateOfIssue: size.outgoingBatch.date, // keep for grouping
+      outgoingPermitNo: size.outgoingBatch.permitNo || '',
+      number: size.quantity || '',
+      partyNameAddress: [pName, pAddr].filter(Boolean).join(', '),
+      partyName: pName,
+      partyAddress: pAddr,
+      incomingPermitNos: incomingPermitNos
+    };
+
     if (size.isReeper) {
       return {
-        dateOfIssue: size.outgoingBatch.date,
-        number: size.quantity || '',
-        length: size.runningFeet || 0, // Store running feet in length
+        ...baseData,
+        length: size.runningFeet || 0,
         width: '',
         thickness: '',
         volume: '',
@@ -246,8 +298,7 @@ const generateRegistersForPeriod = async (start, end, showScientificName) => {
       };
     } else {
       return {
-        dateOfIssue: size.outgoingBatch.date,
-        number: size.quantity || '',
+        ...baseData,
         length: size.length || 0,
         width: size.width || 0,
         thickness: size.thickness || 0,
@@ -262,14 +313,14 @@ const generateRegistersForPeriod = async (start, end, showScientificName) => {
 
 const getRegisters = async (req, res) => {
   try {
-    const { startDate, endDate, showScientificName, groupByMonth, year } = req.query;
+    const { startDate, endDate, showScientificName, showSubtype, groupByMonth, year } = req.query;
 
     if (groupByMonth === 'true' && year) {
       const targetYear = parseInt(year);
       const yearStart = new Date(targetYear, 0, 1);
       const yearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
 
-      const yearlyTotal = await generateRegistersForPeriod(yearStart, yearEnd, showScientificName);
+      const yearlyTotal = await generateRegistersForPeriod(yearStart, yearEnd, showScientificName, showSubtype);
       
       const monthly = [];
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -277,7 +328,7 @@ const getRegisters = async (req, res) => {
       for (let i = 0; i < 12; i++) {
         const mStart = new Date(targetYear, i, 1);
         const mEnd = new Date(targetYear, i + 1, 0, 23, 59, 59, 999);
-        const mData = await generateRegistersForPeriod(mStart, mEnd, showScientificName);
+        const mData = await generateRegistersForPeriod(mStart, mEnd, showScientificName, showSubtype);
         monthly.push({
           monthName: `${monthNames[i]} ${targetYear}`,
           form44a: mData.form44a,
@@ -295,7 +346,7 @@ const getRegisters = async (req, res) => {
       const end = endDate ? new Date(endDate) : new Date();
       end.setHours(23, 59, 59, 999);
 
-      const singleRegister = await generateRegistersForPeriod(start, end, showScientificName);
+      const singleRegister = await generateRegistersForPeriod(start, end, showScientificName, showSubtype);
       return res.json({
         isGrouped: false,
         form44a: singleRegister.form44a,

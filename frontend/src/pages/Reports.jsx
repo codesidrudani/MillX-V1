@@ -194,10 +194,17 @@ const Reports = () => {
       const title = isLogs 
         ? `Opening Stock,Receipt,Disposal of Timber round logs for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`
         : `Out turn & Disposal of Timber Sawn Sizes for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`;
-      appendExcelTable(sheet, title, displayData, currentStartRow);
+      currentStartRow = appendExcelTable(sheet, title, displayData, currentStartRow);
     }
 
     sheet.getColumn(1).width = 25;
+
+    // Print setup
+    sheet.pageSetup.printArea = `A1:K${currentStartRow - 1}`;
+    sheet.pageSetup.printTitlesRow = isLogs ? '3:5' : '3:4';
+    sheet.pageSetup.fitToPage = true;
+    sheet.pageSetup.fitToWidth = 1;
+    sheet.pageSetup.fitToHeight = 0;
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

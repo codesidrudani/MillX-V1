@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { formatDate } from '../utils/dateFormatter';
-import { Calendar, Trash2, ChevronDown, ChevronRight, Activity, Plus } from 'lucide-react';
+import { Calendar, Trash2, ChevronDown, ChevronRight, Activity, Plus, Edit2, Check, X } from 'lucide-react';
 
 const Records = () => {
   const [activeTab, setActiveTab] = useState('incoming');
@@ -20,6 +20,9 @@ const Records = () => {
   const [showAddForm, setShowAddForm] = useState(null); // batchId
   const [addMode, setAddMode] = useState('log'); // 'log' or 'sawn_size'
   const [newItem, setNewItem] = useState({ logNo: '', timberTypeId: '', length: '', girth: '', volume: '', isReeper: false, runningFeet: '', thickness: '', width: '', quantity: '', totalVolume: '' });
+
+  // Permit editing state
+  const [editingPermit, setEditingPermit] = useState({ id: null, value: '' });
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -62,6 +65,16 @@ const Records = () => {
       fetchRecords();
     } catch (err) {
       alert(err.response?.data?.error || "Failed to delete item");
+    }
+  };
+
+  const handleUpdatePermit = async (batchId) => {
+    try {
+      await api.put(`/records/incoming/${batchId}/permit`, { permitNo: editingPermit.value });
+      setEditingPermit({ id: null, value: '' });
+      fetchRecords();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update permit number");
     }
   };
 
@@ -193,7 +206,31 @@ const Records = () => {
                           {expandedRows[batch.id] ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(batch.date)}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">{batch.permitNo}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {editingPermit.id === batch.id ? (
+                            <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
+                              <input 
+                                type="text" 
+                                value={editingPermit.value} 
+                                onChange={e => setEditingPermit({ ...editingPermit, value: e.target.value })}
+                                className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500"
+                                autoFocus
+                              />
+                              <button onClick={() => handleUpdatePermit(batch.id)} className="text-green-600 hover:text-green-800"><Check className="w-4 h-4" /></button>
+                              <button onClick={() => setEditingPermit({ id: null, value: '' })} className="text-red-600 hover:text-red-800"><X className="w-4 h-4" /></button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2 group">
+                              <span>{batch.permitNo}</span>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setEditingPermit({ id: batch.id, value: batch.permitNo }); }}
+                                className="text-gray-400 hover:text-forest-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">{batch.party?.name || 'Unknown'}</td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.source || '-'}</td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.logs.length + batch.sawnSizes.length} items</td>

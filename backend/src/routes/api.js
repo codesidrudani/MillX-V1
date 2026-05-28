@@ -47,6 +47,7 @@ router.delete("/records/outgoing/:id", authenticate, authorize(["admin"]), recor
 router.get("/records/audit-logs", authenticate, authorize(["admin"]), recordsController.getAuditLogs);
 
 // Partial Edit Routes
+router.put("/records/incoming/:id/permit", authenticate, authorize(["admin"]), recordsController.updateIncomingPermit);
 router.delete("/records/incoming/logs/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingLog);
 router.delete("/records/incoming/sizes/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingSize);
 router.post("/records/incoming/:id/items", authenticate, authorize(["admin"]), recordsController.addIncomingItem);

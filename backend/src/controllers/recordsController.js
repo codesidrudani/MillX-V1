@@ -98,6 +98,38 @@ const deleteIncoming = async (req, res) => {
   }
 };
 
+const updateIncomingPermit = async (req, res) => {
+  try {
+    const batchId = parseInt(req.params.id);
+    const { permitNo } = req.body;
+    
+    if (!permitNo) {
+      return res.status(400).json({ error: "Permit number is required" });
+    }
+
+    const batch = await prisma.incomingBatch.update({
+      where: { id: batchId },
+      data: { permitNo }
+    });
+
+    // Audit Log
+    await prisma.auditLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'UPDATE',
+        entity: 'IncomingBatch',
+        entityId: batchId,
+        details: JSON.stringify({ updatedField: 'permitNo', newValue: permitNo })
+      }
+    });
+
+    res.json({ success: true, batch });
+  } catch (error) {
+    console.error("Error updating incoming permit:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 const deleteOutgoing = async (req, res) => {
   try {
     const batchId = parseInt(req.params.id);
@@ -297,5 +329,6 @@ module.exports = {
   addIncomingItem,
   deleteOutgoingProducedSize,
   deleteOutgoingUsage,
-  addOutgoingProducedSize
+  addOutgoingProducedSize,
+  updateIncomingPermit
 };

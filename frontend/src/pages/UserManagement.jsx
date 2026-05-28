@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { UserPlus, Trash2 } from 'lucide-react';
+import { formatDate } from '../utils/dateFormatter';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);

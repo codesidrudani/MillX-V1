@@ -8,6 +8,7 @@ const incomingController = require("../controllers/incomingController");
 const outgoingController = require("../controllers/outgoingController");
 const reportController = require("../controllers/reportController");
 const recordsController = require("../controllers/recordsController");
+const dashboardController = require("../controllers/dashboardController");
 const authenticate = require("../middlewares/auth");
 const authorize = require("../middlewares/rbac");
 
@@ -20,6 +21,9 @@ router.get("/auth/me", authenticate, authController.me);
 // Admin-only routes
 router.get("/users", authenticate, authorize(["admin"]), userController.getUsers);
 router.post("/users", authenticate, authorize(["admin"]), userController.createUser);
+
+// Dashboard Route
+router.get("/dashboard", authenticate, dashboardController.getDashboardStats);
 
 // Master Routes
 ['timberType', 'party'].forEach(master => {

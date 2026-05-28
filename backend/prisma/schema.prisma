@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("data_entry") // admin, data_entry, report_viewer
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  AuditLogs AuditLog[]
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // 'CREATE', 'DELETE'
+  entity    String   // 'IncomingBatch', 'OutgoingBatch', etc.
+  entityId  Int?
+  details   String?  // JSON stringified details
+  createdAt DateTime @default(now())
+}
+
+// --- MASTERS ---
+model TimberType {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  scientificName String?
+  description    String?
+  createdAt      DateTime @default(now())
+  
+  LogInventory      LogInventory[]
+  SawnSizeInventory SawnSizeInventory[]
+  OutgoingSawnSize  OutgoingSawnSize[]
+}
+
+model Party {
+  id            Int             @id @default(autoincrement())
+  name          String
+  contact       String?
+  address       String?
+  partyType     String? // e.g., 'Government', 'Private'
+  createdAt     DateTime        @default(now())
+  IncomingBatch IncomingBatch[]
+  OutgoingBatch OutgoingBatch[]
+}
+
+// --- INVENTORY & OPERATIONS ---
+
+model IncomingBatch {
+  id         Int                 @id @default(autoincrement())
+  date       DateTime
+  permitNo   String
+  source     String?
+  sourceType String?
+  partyId    Int
+  party      Party               @relation(fields: [partyId], references: [id])
+  logs       LogInventory[]
+  sawnSizes  SawnSizeInventory[]
+  createdAt  DateTime            @default(now())
+}
+
+model LogInventory {
+  id              Int           @id @default(autoincrement())
+  logNo           String
+  incomingBatchId Int
+  incomingBatch   IncomingBatch @relation(fields: [incomingBatchId], references: [id])
+  timberTypeId    Int?
+  timberType      TimberType?   @relation(fields: [timberTypeId], references: [id])
+  length          Float
+  girth           Float
+  volume          Float
+  status          String        @default("IN_STOCK") // IN_STOCK, UTILIZED
+  usages          LogUsage[]
+  createdAt       DateTime      @default(now())
+}
+
+model SawnSizeInventory {
+  id              Int             @id @default(autoincrement())
+  incomingBatchId Int
+  incomingBatch   IncomingBatch   @relation(fields: [incomingBatchId], references: [id])
+  timberTypeId    Int?
+  timberType      TimberType?     @relation(fields: [timberTypeId], references: [id])
+  thickness       Float
+  width           Float
+  length          Float?
+  quantity        Int?
+  volume          Float?
+  isReeper        Boolean         @default(false)
+  runningFeet     Float?
+  status          String          @default("IN_STOCK") // "IN_STOCK", "UTILIZED"
+  usages          SawnSizeUsage[]
+  createdAt       DateTime        @default(now())
+}
+
+model OutgoingBatch {
+  id            Int                @id @default(autoincrement())
+  date          DateTime
+  permitNo      String
+  vehicleNo     String?
+  partyId       Int?
+  party         Party?             @relation(fields: [partyId], references: [id])
+  logUsages     LogUsage[]
+  sizeUsages    SawnSizeUsage[]
+  producedSizes OutgoingSawnSize[]
+  createdAt     DateTime           @default(now())
+}
+
+model LogUsage {
+  id              Int           @id @default(autoincrement())
+  outgoingBatchId Int
+  outgoingBatch   OutgoingBatch @relation(fields: [outgoingBatchId], references: [id])
+  logInventoryId  Int
+  logInventory    LogInventory  @relation(fields: [logInventoryId], references: [id])
+}
+
+model SawnSizeUsage {
+  id                  Int               @id @default(autoincrement())
+  outgoingBatchId     Int
+  outgoingBatch       OutgoingBatch     @relation(fields: [outgoingBatchId], references: [id])
+  sawnSizeInventoryId Int
+  sawnSizeInventory   SawnSizeInventory @relation(fields: [sawnSizeInventoryId], references: [id])
+}
+
+model OutgoingSawnSize {
+  id              Int           @id @default(autoincrement())
+  outgoingBatchId Int
+  outgoingBatch   OutgoingBatch @relation(fields: [outgoingBatchId], references: [id])
+  timberTypeId    Int?
+  timberType      TimberType?   @relation(fields: [timberTypeId], references: [id])
+  thickness       Float
+  width           Float
+  length          Float?
+  quantity        Int?
+  totalVolume     Float?
+  isReeper        Boolean       @default(false)
+  runningFeet     Float?
+  createdAt       DateTime      @default(now())
+}

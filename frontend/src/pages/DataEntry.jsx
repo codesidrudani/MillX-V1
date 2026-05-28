@@ -20,6 +20,17 @@ const IncomingForm = ({ masters, fetchInventory }) => {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addItem();
+      setTimeout(() => {
+        const el = document.getElementById(`incoming-timber-${items.length}`);
+        if (el) el.focus();
+      }, 50);
+    }
+  };
+
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
 
   const handleItemChange = (index, field, value) => {
@@ -155,16 +166,16 @@ const IncomingForm = ({ masters, fetchInventory }) => {
                 {items.map((item, idx) => (
                   <tr key={idx}>
                     <td className="px-2 py-2">
-                      <select required value={item.timberTypeId} onChange={(e) => handleItemChange(idx, 'timberTypeId', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm">
+                      <select id={`incoming-timber-${idx}`} required value={item.timberTypeId} onChange={(e) => handleItemChange(idx, 'timberTypeId', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm">
                         <option value="">Select Type</option>
                         {masters.timberTypes?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </td>
                     {mode === 'log' ? (
                       <>
-                        <td className="px-2 py-2"><input type="text" required value={item.logNo} onChange={(e) => handleItemChange(idx, 'logNo', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="No." /></td>
-                        <td className="px-2 py-2"><input type="number" step="any" required value={item.length} onChange={(e) => handleItemChange(idx, 'length', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="L" /></td>
-                        <td className="px-2 py-2"><input type="number" step="any" required value={item.girth} onChange={(e) => handleItemChange(idx, 'girth', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="G" /></td>
+                        <td className="px-2 py-2"><input type="text" required value={item.logNo} onChange={(e) => handleItemChange(idx, 'logNo', e.target.value)} onKeyDown={handleKeyDown} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="No." /></td>
+                        <td className="px-2 py-2"><input type="number" step="any" required value={item.length} onChange={(e) => handleItemChange(idx, 'length', e.target.value)} onKeyDown={handleKeyDown} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="L" /></td>
+                        <td className="px-2 py-2"><input type="number" step="any" required value={item.girth} onChange={(e) => handleItemChange(idx, 'girth', e.target.value)} onKeyDown={handleKeyDown} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="G" /></td>
                       </>
                     ) : (
                       <>
@@ -173,13 +184,13 @@ const IncomingForm = ({ masters, fetchInventory }) => {
                         </td>
                         <td className="px-2 py-2">
                           {item.isReeper ? (
-                            <input type="number" step="any" required value={item.runningFeet} onChange={(e) => handleItemChange(idx, 'runningFeet', e.target.value)} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="Running Feet" />
+                            <input type="number" step="any" required value={item.runningFeet} onChange={(e) => handleItemChange(idx, 'runningFeet', e.target.value)} onKeyDown={handleKeyDown} className="block w-full border-gray-300 rounded-md sm:text-sm" placeholder="Running Feet" />
                           ) : (
                             <div className="flex space-x-1">
-                              <input type="number" step="any" required value={item.thickness} onChange={(e) => handleItemChange(idx, 'thickness', e.target.value)} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="T" />
-                              <input type="number" step="any" required value={item.width} onChange={(e) => handleItemChange(idx, 'width', e.target.value)} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="W" />
-                              <input type="number" step="any" required value={item.length} onChange={(e) => handleItemChange(idx, 'length', e.target.value)} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="L" />
-                              <input type="number" required value={item.quantity} onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="Qty" />
+                              <input type="number" step="any" required value={item.thickness} onChange={(e) => handleItemChange(idx, 'thickness', e.target.value)} onKeyDown={handleKeyDown} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="T" />
+                              <input type="number" step="any" required value={item.width} onChange={(e) => handleItemChange(idx, 'width', e.target.value)} onKeyDown={handleKeyDown} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="W" />
+                              <input type="number" step="any" required value={item.length} onChange={(e) => handleItemChange(idx, 'length', e.target.value)} onKeyDown={handleKeyDown} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="L" />
+                              <input type="number" required value={item.quantity} onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)} onKeyDown={handleKeyDown} className="w-12 border-gray-300 rounded-md sm:text-sm" placeholder="Qty" />
                             </div>
                           )}
                         </td>
@@ -187,7 +198,7 @@ const IncomingForm = ({ masters, fetchInventory }) => {
                     )}
                     <td className="px-2 py-2">
                       {!item.isReeper ? (
-                        <input type="number" step="any" required value={item.volume} onChange={(e) => handleItemChange(idx, 'volume', e.target.value)} className="block w-24 border-gray-300 rounded-md sm:text-sm bg-gray-50" placeholder="Vol" />
+                        <input type="number" step="any" required value={item.volume} onChange={(e) => handleItemChange(idx, 'volume', e.target.value)} onKeyDown={handleKeyDown} className="block w-24 border-gray-300 rounded-md sm:text-sm bg-gray-50" placeholder="Vol" />
                       ) : (
                         <span className="text-sm text-gray-500 pl-2">R.Ft</span>
                       )}
@@ -244,6 +255,17 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
 
   const addProducedSize = () => {
     setProducedSizes([...producedSizes, { isReeper: false, runningFeet: '', timberTypeId: '', thickness: '', width: '', length: '', quantity: '1', totalVolume: '' }]);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addProducedSize();
+      setTimeout(() => {
+        const el = document.getElementById(`outgoing-timber-${producedSizes.length}`);
+        if (el) el.focus();
+      }, 50);
+    }
   };
 
   const removeProducedSize = (index) => setProducedSizes(producedSizes.filter((_, i) => i !== index));
@@ -395,25 +417,25 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {producedSizes.map((size, idx) => (
                 <div key={idx} className="flex items-center space-x-2 bg-gray-50 p-2 rounded-md border border-gray-200">
-                  <select required value={size.timberTypeId || ''} onChange={(e) => handleProducedSizeChange(idx, 'timberTypeId', e.target.value)} className="w-24 px-1 py-1 text-sm border-gray-300 rounded-md bg-white">
+                  <select id={`outgoing-timber-${idx}`} required value={size.timberTypeId || ''} onChange={(e) => handleProducedSizeChange(idx, 'timberTypeId', e.target.value)} className="w-24 px-1 py-1 text-sm border-gray-300 rounded-md bg-white">
                      <option value="">Type</option>
                      {masters.timberTypes?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                   <input type="checkbox" checked={size.isReeper} onChange={(e) => handleProducedSizeChange(idx, 'isReeper', e.target.checked)} className="h-4 w-4 text-forest-600 rounded mx-2" />
                   
                   {size.isReeper ? (
-                    <input type="number" step="any" required placeholder="Running Feet" value={size.runningFeet} onChange={(e) => handleProducedSizeChange(idx, 'runningFeet', e.target.value)} className="flex-1 px-2 py-1 text-sm border-gray-300 rounded-md" />
+                    <input type="number" step="any" required placeholder="Running Feet" value={size.runningFeet} onChange={(e) => handleProducedSizeChange(idx, 'runningFeet', e.target.value)} onKeyDown={handleKeyDown} className="flex-1 px-2 py-1 text-sm border-gray-300 rounded-md" />
                   ) : (
                     <div className="flex space-x-1 flex-1">
-                      <input type="number" step="any" required placeholder="T" value={size.thickness} onChange={(e) => handleProducedSizeChange(idx, 'thickness', e.target.value)} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
-                      <input type="number" step="any" required placeholder="W" value={size.width} onChange={(e) => handleProducedSizeChange(idx, 'width', e.target.value)} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
-                      <input type="number" step="any" required placeholder="L" value={size.length} onChange={(e) => handleProducedSizeChange(idx, 'length', e.target.value)} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
-                      <input type="number" required placeholder="Qty" value={size.quantity} onChange={(e) => handleProducedSizeChange(idx, 'quantity', e.target.value)} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
+                      <input type="number" step="any" required placeholder="T" value={size.thickness} onChange={(e) => handleProducedSizeChange(idx, 'thickness', e.target.value)} onKeyDown={handleKeyDown} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
+                      <input type="number" step="any" required placeholder="W" value={size.width} onChange={(e) => handleProducedSizeChange(idx, 'width', e.target.value)} onKeyDown={handleKeyDown} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
+                      <input type="number" step="any" required placeholder="L" value={size.length} onChange={(e) => handleProducedSizeChange(idx, 'length', e.target.value)} onKeyDown={handleKeyDown} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
+                      <input type="number" required placeholder="Qty" value={size.quantity} onChange={(e) => handleProducedSizeChange(idx, 'quantity', e.target.value)} onKeyDown={handleKeyDown} className="w-10 px-1 py-1 text-sm border-gray-300 rounded-md" />
                     </div>
                   )}
 
                   {!size.isReeper ? (
-                    <input type="number" step="any" required placeholder="Vol" value={size.totalVolume} onChange={(e) => handleProducedSizeChange(idx, 'totalVolume', e.target.value)} className="w-16 px-1 py-1 text-sm border-gray-300 rounded-md bg-white text-right" />
+                    <input type="number" step="any" required placeholder="Vol" value={size.totalVolume} onChange={(e) => handleProducedSizeChange(idx, 'totalVolume', e.target.value)} onKeyDown={handleKeyDown} className="w-16 px-1 py-1 text-sm border-gray-300 rounded-md bg-white text-right" />
                   ) : (
                     <span className="w-16 text-sm text-gray-500 text-right pr-2">R.Ft</span>
                   )}

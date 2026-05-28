@@ -42,6 +42,15 @@ router.delete("/records/incoming/:id", authenticate, authorize(["admin"]), recor
 router.delete("/records/outgoing/:id", authenticate, authorize(["admin"]), recordsController.deleteOutgoing);
 router.get("/records/audit-logs", authenticate, authorize(["admin"]), recordsController.getAuditLogs);
 
+// Partial Edit Routes
+router.delete("/records/incoming/logs/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingLog);
+router.delete("/records/incoming/sizes/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingSize);
+router.post("/records/incoming/:id/items", authenticate, authorize(["admin"]), recordsController.addIncomingItem);
+
+router.delete("/records/outgoing/produced/:id", authenticate, authorize(["admin"]), recordsController.deleteOutgoingProducedSize);
+router.delete("/records/outgoing/usages/:type/:id", authenticate, authorize(["admin"]), recordsController.deleteOutgoingUsage);
+router.post("/records/outgoing/:id/produced", authenticate, authorize(["admin"]), recordsController.addOutgoingProducedSize);
+
 // Reporting Routes
 router.get("/reports", authenticate, authorize(["admin", "report_viewer"]), reportController.getReports);
 router.get("/reports/registers", authenticate, authorize(["admin", "report_viewer"]), reportController.getRegisters);

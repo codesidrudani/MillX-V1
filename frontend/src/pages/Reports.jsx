@@ -4,6 +4,7 @@ import { Download, Filter, Search, Calendar, FileText, Table as TableIcon } from
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { formatDate } from '../utils/dateFormatter';
 
 const Reports = () => {
   const [data, setData] = useState({ roundLogs: [], sawnSizes: [], yearlyTotal: null, monthly: null, isGrouped: false });
@@ -190,10 +191,9 @@ const Reports = () => {
       });
     } else {
       // Single table
-      const monthName = new Date(startDate).toLocaleString('default', { month: 'long', year: 'numeric' });
       const title = isLogs 
-        ? `Opening Stock,Receipt,Disposal of Timber round logs for the month of ${monthName}`
-        : `Out turn & Disposal of Timber Sawn Sizes for the month of ${monthName}`;
+        ? `Opening Stock,Receipt,Disposal of Timber round logs for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`
+        : `Out turn & Disposal of Timber Sawn Sizes for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`;
       appendExcelTable(sheet, title, displayData, currentStartRow);
     }
 
@@ -295,10 +295,9 @@ const Reports = () => {
         }
       });
     } else {
-      const monthName = new Date(startDate).toLocaleString('default', { month: 'long', year: 'numeric' });
       const title = isLogs 
-        ? `Opening Stock,Receipt,Disposal of Timber round logs for the month of ${monthName}`
-        : `Out turn & Disposal of Timber Sawn Sizes for the month of ${monthName}`;
+        ? `Opening Stock,Receipt,Disposal of Timber round logs for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`
+        : `Out turn & Disposal of Timber Sawn Sizes for the period of ${formatDate(startDate)} to ${formatDate(endDate)}`;
       generateTable(title, displayData, startY);
     }
 

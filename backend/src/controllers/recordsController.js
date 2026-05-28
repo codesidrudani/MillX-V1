@@ -166,10 +166,136 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+const deleteIncomingLog = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const log = await prisma.logInventory.findUnique({ where: { id: parseInt(id) } });
+    if (!log) return res.status(404).json({ error: "Log not found" });
+    if (log.status === 'UTILIZED') return res.status(400).json({ error: "Cannot delete a utilized log" });
+    
+    await prisma.logInventory.delete({ where: { id: parseInt(id) } });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: 'DELETE', entity: 'LogInventory', entityId: parseInt(id), details: log.logNo }
+    });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+const deleteIncomingSize = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const size = await prisma.sawnSizeInventory.findUnique({ where: { id: parseInt(id) } });
+    if (!size) return res.status(404).json({ error: "Size not found" });
+    if (size.status === 'UTILIZED') return res.status(400).json({ error: "Cannot delete a utilized size" });
+    
+    await prisma.sawnSizeInventory.delete({ where: { id: parseInt(id) } });
+    await prisma.auditLog.create({
+      data: { userId: req.user.id, action: 'DELETE', entity: 'SawnSizeInventory', entityId: parseInt(id), details: 'Size deleted' }
+    });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+const addIncomingItem = async (req, res) => {
+  const { id } = req.params; 
+  const { mode, item } = req.body;
+  
+  try {
+    if (mode === 'log') {
+      const log = await prisma.logInventory.create({
+        data: {
+          incomingBatchId: parseInt(id),
+          logNo: item.logNo,
+          timberTypeId: parseInt(item.timberTypeId) || null,
+          length: parseFloat(item.length),
+          girth: parseFloat(item.girth),
+          volume: parseFloat(item.volume),
+        }
+      });
+      await prisma.auditLog.create({ data: { userId: req.user.id, action: 'CREATE', entity: 'LogInventory', entityId: log.id, details: log.logNo } });
+      res.json(log);
+    } else {
+      const size = await prisma.sawnSizeInventory.create({
+        data: {
+          incomingBatchId: parseInt(id),
+          timberTypeId: parseInt(item.timberTypeId) || null,
+          isReeper: Boolean(item.isReeper),
+          runningFeet: item.isReeper ? parseFloat(item.runningFeet) : null,
+          thickness: item.isReeper ? 0 : parseFloat(item.thickness),
+          width: item.isReeper ? 0 : parseFloat(item.width),
+          length: item.isReeper ? null : parseFloat(item.length),
+          quantity: item.isReeper ? null : parseInt(item.quantity, 10),
+          volume: item.isReeper ? null : parseFloat(item.volume),
+        }
+      });
+      await prisma.auditLog.create({ data: { userId: req.user.id, action: 'CREATE', entity: 'SawnSizeInventory', entityId: size.id, details: 'Size added' } });
+      res.json(size);
+    }
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+const deleteOutgoingProducedSize = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.outgoingSawnSize.delete({ where: { id: parseInt(id) } });
+    await prisma.auditLog.create({ data: { userId: req.user.id, action: 'DELETE', entity: 'OutgoingSawnSize', entityId: parseInt(id), details: 'Produced size deleted' } });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+const deleteOutgoingUsage = async (req, res) => {
+  const { type, id } = req.params;
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (type === 'log') {
+        const usage = await tx.logUsage.findUnique({ where: { id: parseInt(id) } });
+        if (!usage) return;
+        await tx.logInventory.update({ where: { id: usage.logInventoryId }, data: { status: 'IN_STOCK' } });
+        await tx.logUsage.delete({ where: { id: parseInt(id) } });
+      } else {
+        const usage = await tx.sawnSizeUsage.findUnique({ where: { id: parseInt(id) } });
+        if (!usage) return;
+        await tx.sawnSizeInventory.update({ where: { id: usage.sawnSizeInventoryId }, data: { status: 'IN_STOCK' } });
+        await tx.sawnSizeUsage.delete({ where: { id: parseInt(id) } });
+      }
+      await tx.auditLog.create({ data: { userId: req.user.id, action: 'DELETE', entity: type === 'log' ? 'LogUsage' : 'SawnSizeUsage', entityId: parseInt(id), details: 'Usage deleted and stock restored' } });
+    });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
+const addOutgoingProducedSize = async (req, res) => {
+  const { id } = req.params; 
+  const { size } = req.body;
+  try {
+    const prodSize = await prisma.outgoingSawnSize.create({
+      data: {
+        outgoingBatchId: parseInt(id),
+        timberTypeId: parseInt(size.timberTypeId) || null,
+        isReeper: Boolean(size.isReeper),
+        runningFeet: size.isReeper ? parseFloat(size.runningFeet) : null,
+        thickness: size.isReeper ? 0 : parseFloat(size.thickness),
+        width: size.isReeper ? 0 : parseFloat(size.width),
+        length: size.isReeper ? null : parseFloat(size.length),
+        quantity: size.isReeper ? null : parseInt(size.quantity, 10),
+        totalVolume: size.isReeper ? null : parseFloat(size.totalVolume),
+      }
+    });
+    await prisma.auditLog.create({ data: { userId: req.user.id, action: 'CREATE', entity: 'OutgoingSawnSize', entityId: prodSize.id, details: 'Produced size added' } });
+    res.json(prodSize);
+  } catch (error) { res.status(500).json({ error: "Internal server error" }); }
+};
+
 module.exports = {
   getIncoming,
   getOutgoing,
   deleteIncoming,
   deleteOutgoing,
-  getAuditLogs
+  getAuditLogs,
+  deleteIncomingLog,
+  deleteIncomingSize,
+  addIncomingItem,
+  deleteOutgoingProducedSize,
+  deleteOutgoingUsage,
+  addOutgoingProducedSize
 };

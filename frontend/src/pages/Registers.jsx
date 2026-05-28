@@ -4,6 +4,7 @@ import { Download, Calendar, FileText, Table as TableIcon } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { formatDate } from '../utils/dateFormatter';
 
 const Registers = () => {
   const [data, setData] = useState({ form44a: [], form44b: [], yearlyTotal: null, monthly: null, isGrouped: false });
@@ -97,7 +98,7 @@ const Registers = () => {
           row.slNo,
           row.partyNameAddress,
           row.source,
-          new Date(row.dateOfReceipt).toLocaleDateString(),
+          formatDate(row.dateOfReceipt),
           row.permitNo,
           '', // Marks
           row.logNo,
@@ -142,7 +143,7 @@ const Registers = () => {
       let currRow = headersRow + 1;
       blockData.forEach((row) => {
         const tr = sheet.addRow([
-          new Date(row.dateOfIssue).toLocaleDateString(),
+          formatDate(row.dateOfIssue),
           row.number,
           Number(formatLength(row.length)),
           Number(formatInchToMeter(row.width)),
@@ -220,8 +221,7 @@ const Registers = () => {
         }
       });
     } else {
-      const monthName = new Date(startDate).toLocaleString('default', { month: 'long', year: 'numeric' });
-      const title = `For the period of ${startDate} to ${endDate}`;
+      const title = `For the period of ${formatDate(startDate)} to ${formatDate(endDate)}`;
       appendExcelTable(sheet, title, tableData, currentStartRow, is44a);
     }
 
@@ -269,7 +269,7 @@ const Registers = () => {
         ]];
 
         body = blockData.map(row => [
-          row.slNo, row.partyNameAddress, row.source, new Date(row.dateOfReceipt).toLocaleDateString(),
+          row.slNo, row.partyNameAddress, row.source, formatDate(row.dateOfReceipt),
           row.permitNo, '', row.logNo, row.kind, formatLength(row.length), formatInchToMeter(row.girth), formatVol(row.volume), ''
         ]);
       } else {
@@ -280,7 +280,7 @@ const Registers = () => {
         ]];
 
         body = blockData.map(row => [
-          new Date(row.dateOfIssue).toLocaleDateString(), row.number, formatLength(row.length), 
+          formatDate(row.dateOfIssue), row.number, formatLength(row.length), 
           formatInchToMeter(row.width), formatInchToMeter(row.thickness), row.remarks === 'Reeper' ? '' : formatVol(row.volume), '', '', row.remarks
         ]);
       }
@@ -501,7 +501,7 @@ const Registers = () => {
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.slNo}</td>
                           <td className="px-3 py-2 whitespace-pre-line text-sm text-center border-r">{row.partyNameAddress}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.source}</td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{new Date(row.dateOfReceipt).toLocaleDateString()}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{formatDate(row.dateOfReceipt)}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.permitNo}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r"></td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.logNo}</td>
@@ -513,7 +513,7 @@ const Registers = () => {
                         </tr>
                       ) : (
                         <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{new Date(row.dateOfIssue).toLocaleDateString()}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{formatDate(row.dateOfIssue)}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.number}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{formatLength(row.length)}</td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{formatInchToMeter(row.width)}</td>

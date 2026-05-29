@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../store/useAuth';
 import { Download, Calendar, FileText, Table as TableIcon } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -78,7 +80,6 @@ const Registers = () => {
         processed.push({ isTotalRow: true, totalVolume: groupTotal });
         processed.push({ isBlankRow: true });
         groupTotal = 0;
-        currentSlNo++;
       }
       currentKey = key;
 
@@ -87,7 +88,7 @@ const Registers = () => {
 
       processed.push({
         ...row,
-        displaySlNo: currentSlNo
+        displaySlNo: currentSlNo++
       });
     });
 
@@ -188,7 +189,7 @@ const Registers = () => {
           }
           lastKey = row.permitNo;
           const tr = sheet.addRow([
-            isSame ? '' : row.displaySlNo,
+            row.displaySlNo,
             row.displayParty,
             isSame ? '' : row.source,
             isSame ? '' : formatDate(row.dateOfReceipt),
@@ -488,7 +489,7 @@ const Registers = () => {
           const isSame = lastKey === row.permitNo;
           lastKey = row.permitNo;
           return [
-            isSame ? '' : row.displaySlNo, row.displayParty, isSame ? '' : row.source, isSame ? '' : formatDate(row.dateOfReceipt),
+            row.displaySlNo, row.displayParty, isSame ? '' : row.source, isSame ? '' : formatDate(row.dateOfReceipt),
             isSame ? '' : row.permitNo, '', row.logNo, row.kind, formatLength(row.length), formatInchToMeter(row.girth), formatVol(row.volume), ''
           ];
         });
@@ -609,19 +610,19 @@ const Registers = () => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-gray-400" />
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                <DatePicker
+                  selected={startDate ? new Date(startDate) : null}
+                  onChange={(date) => setStartDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                  dateFormat="dd/MM/yy"
                   className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
                 />
               </div>
               <span className="text-gray-500 font-medium">to</span>
               <div className="flex items-center space-x-2">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                <DatePicker
+                  selected={endDate ? new Date(endDate) : null}
+                  onChange={(date) => setEndDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                  dateFormat="dd/MM/yy"
                   className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
                 />
               </div>
@@ -758,7 +759,7 @@ const Registers = () => {
                           lastKey = row.permitNo;
                           return (
                             <tr key={idx} className="hover:bg-gray-50">
-                              <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{isSame ? '' : row.displaySlNo}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{row.displaySlNo}</td>
                               <td className="px-3 py-2 whitespace-pre-line text-sm text-center border-r">{row.displayParty}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{isSame ? '' : row.source}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-sm text-center border-r">{isSame ? '' : formatDate(row.dateOfReceipt)}</td>

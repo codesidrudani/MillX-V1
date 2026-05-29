@@ -99,21 +99,22 @@ const deleteIncoming = async (req, res) => {
   }
 };
 
-const updateIncomingPermit = async (req, res) => {
+const updateIncomingHeader = async (req, res) => {
   try {
     const batchId = parseInt(req.params.id);
-    const { permitNo } = req.body;
-    
-    if (!permitNo) {
-      return res.status(400).json({ error: "Permit number is required" });
-    }
+    const { permitNo, date, partyId, source } = req.body;
+
+    const data = {};
+    if (permitNo !== undefined) data.permitNo = permitNo;
+    if (date !== undefined) data.date = new Date(date);
+    if (partyId !== undefined) data.partyId = parseInt(partyId);
+    if (source !== undefined) data.source = source;
 
     const batch = await prisma.incomingBatch.update({
       where: { id: batchId, millId: req.user.millId },
-      data: { permitNo }
+      data
     });
 
-    // Audit Log
     await prisma.auditLog.create({
       data: {
         millId: req.user.millId,
@@ -121,13 +122,47 @@ const updateIncomingPermit = async (req, res) => {
         action: 'UPDATE',
         entity: 'IncomingBatch',
         entityId: batchId,
-        details: JSON.stringify({ updatedField: 'permitNo', newValue: permitNo })
+        details: JSON.stringify({ updated: 'header', ...data })
       }
     });
 
     res.json({ success: true, batch });
   } catch (error) {
-    console.error("Error updating incoming permit:", error);
+    console.error("Error updating incoming header:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const updateOutgoingHeader = async (req, res) => {
+  try {
+    const batchId = parseInt(req.params.id);
+    const { permitNo, date, partyId, vehicleNo } = req.body;
+
+    const data = {};
+    if (permitNo !== undefined) data.permitNo = permitNo;
+    if (date !== undefined) data.date = new Date(date);
+    if (partyId !== undefined) data.partyId = parseInt(partyId);
+    if (vehicleNo !== undefined) data.vehicleNo = vehicleNo;
+
+    const batch = await prisma.outgoingBatch.update({
+      where: { id: batchId, millId: req.user.millId },
+      data
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        millId: req.user.millId,
+        userId: req.user.id,
+        action: 'UPDATE',
+        entity: 'OutgoingBatch',
+        entityId: batchId,
+        details: JSON.stringify({ updated: 'header', ...data })
+      }
+    });
+
+    res.json({ success: true, batch });
+  } catch (error) {
+    console.error("Error updating outgoing header:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -337,5 +372,6 @@ module.exports = {
   deleteOutgoingProducedSize,
   deleteOutgoingUsage,
   addOutgoingProducedSize,
-  updateIncomingPermit
+  updateIncomingHeader,
+  updateOutgoingHeader
 };

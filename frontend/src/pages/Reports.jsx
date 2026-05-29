@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../store/useAuth';
 import { Download, Filter, Search, Calendar, FileText, Table as TableIcon } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -424,20 +426,20 @@ const Reports = () => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-gray-400" />
-                <input 
-                  type="date" 
-                  value={startDate} 
-                  onChange={(e) => setStartDate(e.target.value)} 
-                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500" 
+                <DatePicker
+                  selected={startDate ? new Date(startDate) : null}
+                  onChange={(date) => setStartDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                  dateFormat="dd/MM/yy"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
                 />
               </div>
               <span className="text-gray-500 font-medium">to</span>
               <div className="flex items-center space-x-2">
-                <input 
-                  type="date" 
-                  value={endDate} 
-                  onChange={(e) => setEndDate(e.target.value)} 
-                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500" 
+                <DatePicker
+                  selected={endDate ? new Date(endDate) : null}
+                  onChange={(date) => setEndDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                  dateFormat="dd/MM/yy"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
                 />
               </div>
             </div>

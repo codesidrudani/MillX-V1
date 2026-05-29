@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, RefreshCw } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const IncomingForm = ({ masters, fetchInventory }) => {
   const [mode, setMode] = useState('log');
@@ -128,7 +130,13 @@ const IncomingForm = ({ masters, fetchInventory }) => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input type="date" name="date" required value={header.date} onChange={handleHeaderChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm" />
+            <DatePicker
+              selected={header.date ? new Date(header.date) : null}
+              onChange={(date) => handleHeaderChange({ target: { name: 'date', value: date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '' } })}
+              dateFormat="dd/MM/yy"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm"
+              required
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Permit Number</label>
@@ -384,7 +392,13 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input type="date" name="date" required value={header.date} onChange={handleHeaderChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm" />
+            <DatePicker
+              selected={header.date ? new Date(header.date) : null}
+              onChange={(date) => handleHeaderChange({ target: { name: 'date', value: date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '' } })}
+              dateFormat="dd/MM/yy"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm"
+              required
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Permit Number</label>

@@ -1,9 +1,31 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const generateReportForPeriod = (start, end, allLogs, allSizeInv, allProduced, showSubtype, showScientificName) => {
+const generateReportForPeriod = (start, end, allLogs, allSizeInv, allProduced, showSubtype, showScientificName, allTimberTypes = []) => {
   const logGroups = {}; 
   const sizeGroups = {}; 
+
+  allTimberTypes.forEach(t => {
+    let typeName = t.name;
+    if ((showScientificName === 'true' || showScientificName === true) && t.scientificName) {
+      typeName = t.scientificName;
+    }
+    const groupKey = typeName;
+    logGroups[groupKey] = {
+      timberType: typeName, key: groupKey,
+      opening: 0, openingNos: 0,
+      incoming: 0, incomingNos: 0,
+      sawn: 0, sawnNos: 0,
+      closing: 0, closingNos: 0
+    };
+    sizeGroups[groupKey] = {
+      key: groupKey, timberType: typeName,
+      openingSizes: 0, openingReepers: 0,
+      productionSizes: 0, productionReepers: 0,
+      outgoingSizes: 0, outgoingReepers: 0,
+      closingSizes: 0, closingReepers: 0
+    };
+  }); 
 
   allLogs.forEach(log => {
     const isIncomingBefore = log.incomingBatch.date < start;
@@ -156,13 +178,16 @@ const getReports = async (req, res) => {
       where: { millId: req.user.millId },
       include: { outgoingBatch: true, timberType: true }
     });
+    const allTimberTypes = await prisma.timberType.findMany({
+      where: { millId: req.user.millId }
+    });
 
     if (groupByMonth === 'true' && year) {
       const targetYear = parseInt(year);
       const yearStart = new Date(targetYear, 0, 1);
       const yearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
 
-      const yearlyTotal = generateReportForPeriod(yearStart, yearEnd, allLogs, allSizeInv, allProduced, showSubtype, showScientificName);
+      const yearlyTotal = generateReportForPeriod(yearStart, yearEnd, allLogs, allSizeInv, allProduced, showSubtype, showScientificName, allTimberTypes);
       
       const monthly = [];
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -170,7 +195,7 @@ const getReports = async (req, res) => {
       for (let i = 0; i < 12; i++) {
         const mStart = new Date(targetYear, i, 1);
         const mEnd = new Date(targetYear, i + 1, 0, 23, 59, 59, 999); // last day of month
-        const mData = generateReportForPeriod(mStart, mEnd, allLogs, allSizeInv, allProduced, showSubtype, showScientificName);
+        const mData = generateReportForPeriod(mStart, mEnd, allLogs, allSizeInv, allProduced, showSubtype, showScientificName, allTimberTypes);
         monthly.push({
           monthName: `${monthNames[i]} ${targetYear}`,
           roundLogs: mData.roundLogs,
@@ -188,7 +213,7 @@ const getReports = async (req, res) => {
       const end = endDate ? new Date(endDate) : new Date();
       end.setHours(23, 59, 59, 999);
 
-      const singleReport = generateReportForPeriod(start, end, allLogs, allSizeInv, allProduced, showSubtype, showScientificName);
+      const singleReport = generateReportForPeriod(start, end, allLogs, allSizeInv, allProduced, showSubtype, showScientificName, allTimberTypes);
       return res.json({
         isGrouped: false,
         roundLogs: singleReport.roundLogs,

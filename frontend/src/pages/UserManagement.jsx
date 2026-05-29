@@ -46,6 +46,16 @@ const UserManagement = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      await api.delete(`/users/${id}`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete user');
+    }
+  };
+
   if (loading) return <div>Loading users...</div>;
 
   return (
@@ -172,8 +182,11 @@ const UserManagement = () => {
                       {formatDate(u.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {/* Placeholder for delete action */}
-                      <button className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full">
+                      <button 
+                        onClick={() => handleDelete(u.id)}
+                        className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full"
+                        title="Delete User"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>

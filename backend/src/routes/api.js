@@ -22,6 +22,7 @@ router.get("/auth/me", authenticate, authController.me);
 // Admin-only routes
 router.get("/users", authenticate, authorize(["admin"]), userController.getUsers);
 router.post("/users", authenticate, authorize(["admin"]), userController.createUser);
+router.delete("/users/:id", authenticate, authorize(["admin"]), userController.deleteUser);
 
 // Dashboard Route
 router.get("/dashboard", authenticate, dashboardController.getDashboardStats);
@@ -48,7 +49,8 @@ router.delete("/records/outgoing/:id", authenticate, authorize(["admin"]), recor
 router.get("/records/audit-logs", authenticate, authorize(["admin"]), recordsController.getAuditLogs);
 
 // Partial Edit Routes
-router.put("/records/incoming/:id/permit", authenticate, authorize(["admin"]), recordsController.updateIncomingPermit);
+router.put("/records/incoming/:id/header", authenticate, authorize(["admin"]), recordsController.updateIncomingHeader);
+router.put("/records/outgoing/:id/header", authenticate, authorize(["admin"]), recordsController.updateOutgoingHeader);
 router.delete("/records/incoming/logs/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingLog);
 router.delete("/records/incoming/sizes/:id", authenticate, authorize(["admin"]), recordsController.deleteIncomingSize);
 router.post("/records/incoming/:id/items", authenticate, authorize(["admin"]), recordsController.addIncomingItem);

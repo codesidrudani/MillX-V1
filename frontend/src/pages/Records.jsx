@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { formatDate } from '../utils/dateFormatter';
 import { Calendar, Trash2, ChevronDown, ChevronRight, Activity, Plus, Edit2, Check, X } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const Records = () => {
   const [activeTab, setActiveTab] = useState('incoming');
@@ -11,7 +13,7 @@ const Records = () => {
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
-  const [timberTypes, setTimberTypes] = useState([]);
+  const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
   const [error, setError] = useState(null);
@@ -21,8 +23,8 @@ const Records = () => {
   const [addMode, setAddMode] = useState('log'); // 'log' or 'sawn_size'
   const [newItem, setNewItem] = useState({ logNo: '', timberTypeId: '', length: '', girth: '', volume: '', isReeper: false, runningFeet: '', thickness: '', width: '', quantity: '', totalVolume: '' });
 
-  // Permit editing state
-  const [editingPermit, setEditingPermit] = useState({ id: null, value: '' });
+  // Header editing state
+  const [editingHeader, setEditingHeader] = useState({ id: null, type: null, data: {} });
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -49,8 +51,9 @@ const Records = () => {
   useEffect(() => {
     fetchRecords();
     setExpandedRows({});
-    // Fetch timber types for the add forms
+    // Fetch timber types and parties for the add forms and editing
     api.get('/timberType').then(res => setTimberTypes(res.data)).catch(console.error);
+    api.get('/party').then(res => setParties(res.data)).catch(console.error);
   }, [activeTab, startDate, endDate]);
 
   const toggleRow = (id) => {
@@ -68,13 +71,31 @@ const Records = () => {
     }
   };
 
-  const handleUpdatePermit = async (batchId) => {
+  const startEditHeader = (batch, type) => {
+    setEditingHeader({
+      id: batch.id,
+      type,
+      data: {
+        date: new Date(batch.date).toISOString().split('T')[0],
+        permitNo: batch.permitNo,
+        partyId: batch.partyId || '',
+        source: batch.source || '',
+        vehicleNo: batch.vehicleNo || ''
+      }
+    });
+  };
+
+  const handleUpdateHeader = async () => {
     try {
-      await api.put(`/records/incoming/${batchId}/permit`, { permitNo: editingPermit.value });
-      setEditingPermit({ id: null, value: '' });
+      if (editingHeader.type === 'incoming') {
+        await api.put(`/records/incoming/${editingHeader.id}/header`, editingHeader.data);
+      } else {
+        await api.put(`/records/outgoing/${editingHeader.id}/header`, editingHeader.data);
+      }
+      setEditingHeader({ id: null, type: null, data: {} });
       fetchRecords();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to update permit number");
+      alert(err.response?.data?.error || "Failed to update header");
     }
   };
 
@@ -118,20 +139,20 @@ const Records = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Calendar className="w-5 h-5 text-gray-400" />
-              <input 
-                type="date" 
-                value={startDate} 
-                onChange={(e) => setStartDate(e.target.value)} 
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500" 
+              <DatePicker
+                selected={startDate ? new Date(startDate) : null}
+                onChange={(date) => setStartDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                dateFormat="dd/MM/yy"
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
               />
             </div>
             <span className="text-gray-500 font-medium">to</span>
             <div className="flex items-center space-x-2">
-              <input 
-                type="date" 
-                value={endDate} 
-                onChange={(e) => setEndDate(e.target.value)} 
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500" 
+              <DatePicker
+                selected={endDate ? new Date(endDate) : null}
+                onChange={(date) => setEndDate(date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : '')}
+                dateFormat="dd/MM/yy"
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-forest-500 focus:border-forest-500"
               />
             </div>
           </div>
@@ -205,39 +226,48 @@ const Records = () => {
                         <td className="px-3 py-4 text-center">
                           {expandedRows[batch.id] ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
                         </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(batch.date)}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {editingHeader.id === batch.id ? (
+                            <div onClick={e => e.stopPropagation()}>
+                              <DatePicker selected={editingHeader.data.date ? new Date(editingHeader.data.date) : null} onChange={date => setEditingHeader({...editingHeader, data: {...editingHeader.data, date: date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : ''}})} dateFormat="dd/MM/yy" className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-forest-500 focus:border-forest-500 w-28" />
+                            </div>
+                          ) : formatDate(batch.date)}
+                        </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
-                          {editingPermit.id === batch.id ? (
-                            <div className="flex items-center space-x-2" onClick={e => e.stopPropagation()}>
-                              <input 
-                                type="text" 
-                                value={editingPermit.value} 
-                                onChange={e => setEditingPermit({ ...editingPermit, value: e.target.value })}
-                                className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500"
-                                autoFocus
-                              />
-                              <button onClick={() => handleUpdatePermit(batch.id)} className="text-green-600 hover:text-green-800"><Check className="w-4 h-4" /></button>
-                              <button onClick={() => setEditingPermit({ id: null, value: '' })} className="text-red-600 hover:text-red-800"><X className="w-4 h-4" /></button>
+                          {editingHeader.id === batch.id ? (
+                            <input type="text" value={editingHeader.data.permitNo} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, permitNo: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()} />
+                          ) : batch.permitNo}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {editingHeader.id === batch.id ? (
+                            <select value={editingHeader.data.partyId} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, partyId: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-32 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()}>
+                              <option value="">Select Party</option>
+                              {parties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          ) : (batch.party?.name || 'Unknown')}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {editingHeader.id === batch.id ? (
+                            <input type="text" value={editingHeader.data.source} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, source: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()} />
+                          ) : (batch.source || '-')}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.logs.length + batch.sawnSizes.length} items</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {editingHeader.id === batch.id ? (
+                            <div className="flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                              <button onClick={handleUpdateHeader} className="text-green-600 hover:text-green-800"><Check className="w-5 h-5" /></button>
+                              <button onClick={() => setEditingHeader({ id: null, type: null, data: {} })} className="text-red-600 hover:text-red-800"><X className="w-5 h-5" /></button>
                             </div>
                           ) : (
-                            <div className="flex items-center space-x-2 group">
-                              <span>{batch.permitNo}</span>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); setEditingPermit({ id: batch.id, value: batch.permitNo }); }}
-                                className="text-gray-400 hover:text-forest-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Edit2 className="w-3 h-3" />
+                            <div className="flex items-center justify-end space-x-2">
+                              <button onClick={(e) => { e.stopPropagation(); startEditHeader(batch, 'incoming'); }} className="text-gray-400 hover:text-forest-600 p-2 hover:bg-forest-50 rounded-full transition-colors">
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(batch.id, 'incoming'); }} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           )}
-                        </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">{batch.party?.name || 'Unknown'}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.source || '-'}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.logs.length + batch.sawnSizes.length} items</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(batch.id, 'incoming'); }} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </td>
                       </tr>
                       {expandedRows[batch.id] && (
@@ -367,15 +397,48 @@ const Records = () => {
                         <td className="px-3 py-4 text-center">
                           {expandedRows[batch.id] ? <ChevronDown className="w-5 h-5 text-gray-400" /> : <ChevronRight className="w-5 h-5 text-gray-400" />}
                         </td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(batch.date)}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">{batch.permitNo}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">{batch.party?.name || 'Internal'}</td>
-                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.vehicleNo || '-'}</td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {editingHeader.id === batch.id ? (
+                            <div onClick={e => e.stopPropagation()}>
+                              <DatePicker selected={editingHeader.data.date ? new Date(editingHeader.data.date) : null} onChange={date => setEditingHeader({...editingHeader, data: {...editingHeader.data, date: date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : ''}})} dateFormat="dd/MM/yy" className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-forest-500 focus:border-forest-500 w-28" />
+                            </div>
+                          ) : formatDate(batch.date)}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {editingHeader.id === batch.id ? (
+                            <input type="text" value={editingHeader.data.permitNo} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, permitNo: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()} />
+                          ) : batch.permitNo}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {editingHeader.id === batch.id ? (
+                            <select value={editingHeader.data.partyId} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, partyId: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-32 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()}>
+                              <option value="">Select Party</option>
+                              {parties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          ) : (batch.party?.name || 'Internal')}
+                        </td>
+                        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {editingHeader.id === batch.id ? (
+                            <input type="text" value={editingHeader.data.vehicleNo} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, vehicleNo: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()} />
+                          ) : (batch.vehicleNo || '-')}
+                        </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.producedSizes.length} items</td>
                         <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(batch.id, 'outgoing'); }} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {editingHeader.id === batch.id ? (
+                            <div className="flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                              <button onClick={handleUpdateHeader} className="text-green-600 hover:text-green-800"><Check className="w-5 h-5" /></button>
+                              <button onClick={() => setEditingHeader({ id: null, type: null, data: {} })} className="text-red-600 hover:text-red-800"><X className="w-5 h-5" /></button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end space-x-2">
+                              <button onClick={(e) => { e.stopPropagation(); startEditHeader(batch, 'outgoing'); }} className="text-gray-400 hover:text-forest-600 p-2 hover:bg-forest-50 rounded-full transition-colors">
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(batch.id, 'outgoing'); }} className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                       {expandedRows[batch.id] && (

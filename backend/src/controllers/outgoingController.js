@@ -14,12 +14,14 @@ const createOutgoingBatch = async (req, res) => {
       // 1. Create the OutgoingBatch and its Produced Sizes
       const batch = await tx.outgoingBatch.create({
         data: {
+          millId: req.user.millId,
           date: new Date(date),
           permitNo,
           vehicleNo: vehicleNo || null,
           partyId: parseInt(partyId),
           producedSizes: {
             create: producedSizes.map(size => ({
+              millId: req.user.millId,
               timberTypeId: parseInt(size.timberTypeId) || null,
               isReeper: Boolean(size.isReeper),
               runningFeet: size.isReeper ? parseFloat(size.runningFeet) : null,
@@ -36,30 +38,33 @@ const createOutgoingBatch = async (req, res) => {
       // 2. Link utilized items and update their status to UTILIZED
       if (mode === 'log') {
         const logUsagesData = utilizedItemIds.map(id => ({
+          millId: req.user.millId,
           outgoingBatchId: batch.id,
           logInventoryId: parseInt(id)
         }));
         await tx.logUsage.createMany({ data: logUsagesData });
 
         await tx.logInventory.updateMany({
-          where: { id: { in: utilizedItemIds.map(id => parseInt(id)) } },
+          where: { millId: req.user.millId, id: { in: utilizedItemIds.map(id => parseInt(id)) } },
           data: { status: 'UTILIZED' }
         });
       } else if (mode === 'sawn_size') {
         const sizeUsagesData = utilizedItemIds.map(id => ({
+          millId: req.user.millId,
           outgoingBatchId: batch.id,
           sawnSizeInventoryId: parseInt(id)
         }));
         await tx.sawnSizeUsage.createMany({ data: sizeUsagesData });
 
         await tx.sawnSizeInventory.updateMany({
-          where: { id: { in: utilizedItemIds.map(id => parseInt(id)) } },
+          where: { millId: req.user.millId, id: { in: utilizedItemIds.map(id => parseInt(id)) } },
           data: { status: 'UTILIZED' }
         });
       }
 
       await tx.auditLog.create({
         data: {
+          millId: req.user.millId,
           userId: req.user.id,
           action: 'CREATE',
           entity: 'OutgoingBatch',

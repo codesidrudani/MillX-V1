@@ -3,8 +3,28 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Mill {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  status    String   @default("ACTIVE") // ACTIVE, FROZEN
+  createdAt DateTime @default(now())
+
+  users             User[]
+  timberTypes       TimberType[]
+  parties           Party[]
+  incomingBatches   IncomingBatch[]
+  logInventories    LogInventory[]
+  sawnSizeInventories SawnSizeInventory[]
+  outgoingBatches   OutgoingBatch[]
+  logUsages         LogUsage[]
+  sawnSizeUsages    SawnSizeUsage[]
+  outgoingSawnSizes OutgoingSawnSize[]
+  auditLogs         AuditLog[]
 }
 
 model User {
@@ -12,7 +32,9 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("data_entry") // admin, data_entry, report_viewer
+  role      String   @default("data_entry") // superadmin, admin, data_entry, report_viewer
+  millId    Int?
+  mill      Mill?    @relation(fields: [millId], references: [id])
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   AuditLogs AuditLog[]
@@ -20,6 +42,8 @@ model User {
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
+  millId    Int
+  mill      Mill     @relation(fields: [millId], references: [id])
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   action    String   // 'CREATE', 'DELETE'
@@ -32,6 +56,8 @@ model AuditLog {
 // --- MASTERS ---
 model TimberType {
   id             Int      @id @default(autoincrement())
+  millId         Int
+  mill           Mill     @relation(fields: [millId], references: [id])
   name           String   @unique
   scientificName String?
   description    String?
@@ -44,6 +70,8 @@ model TimberType {
 
 model Party {
   id            Int             @id @default(autoincrement())
+  millId        Int
+  mill          Mill            @relation(fields: [millId], references: [id])
   name          String
   contact       String?
   address       String?
@@ -57,6 +85,8 @@ model Party {
 
 model IncomingBatch {
   id         Int                 @id @default(autoincrement())
+  millId     Int
+  mill       Mill                @relation(fields: [millId], references: [id])
   date       DateTime
   permitNo   String
   source     String?
@@ -70,6 +100,8 @@ model IncomingBatch {
 
 model LogInventory {
   id              Int           @id @default(autoincrement())
+  millId          Int
+  mill            Mill          @relation(fields: [millId], references: [id])
   logNo           String
   incomingBatchId Int
   incomingBatch   IncomingBatch @relation(fields: [incomingBatchId], references: [id])
@@ -85,6 +117,8 @@ model LogInventory {
 
 model SawnSizeInventory {
   id              Int             @id @default(autoincrement())
+  millId          Int
+  mill            Mill            @relation(fields: [millId], references: [id])
   incomingBatchId Int
   incomingBatch   IncomingBatch   @relation(fields: [incomingBatchId], references: [id])
   timberTypeId    Int?
@@ -103,6 +137,8 @@ model SawnSizeInventory {
 
 model OutgoingBatch {
   id            Int                @id @default(autoincrement())
+  millId        Int
+  mill          Mill               @relation(fields: [millId], references: [id])
   date          DateTime
   permitNo      String
   vehicleNo     String?
@@ -116,6 +152,8 @@ model OutgoingBatch {
 
 model LogUsage {
   id              Int           @id @default(autoincrement())
+  millId          Int
+  mill            Mill          @relation(fields: [millId], references: [id])
   outgoingBatchId Int
   outgoingBatch   OutgoingBatch @relation(fields: [outgoingBatchId], references: [id])
   logInventoryId  Int
@@ -124,6 +162,8 @@ model LogUsage {
 
 model SawnSizeUsage {
   id                  Int               @id @default(autoincrement())
+  millId              Int
+  mill                Mill              @relation(fields: [millId], references: [id])
   outgoingBatchId     Int
   outgoingBatch       OutgoingBatch     @relation(fields: [outgoingBatchId], references: [id])
   sawnSizeInventoryId Int
@@ -132,6 +172,8 @@ model SawnSizeUsage {
 
 model OutgoingSawnSize {
   id              Int           @id @default(autoincrement())
+  millId          Int
+  mill            Mill          @relation(fields: [millId], references: [id])
   outgoingBatchId Int
   outgoingBatch   OutgoingBatch @relation(fields: [outgoingBatchId], references: [id])
   timberTypeId    Int?

@@ -9,6 +9,7 @@ const outgoingController = require("../controllers/outgoingController");
 const reportController = require("../controllers/reportController");
 const recordsController = require("../controllers/recordsController");
 const dashboardController = require("../controllers/dashboardController");
+const superadminController = require("../controllers/superadminController");
 const authenticate = require("../middlewares/auth");
 const authorize = require("../middlewares/rbac");
 
@@ -59,5 +60,10 @@ router.post("/records/outgoing/:id/produced", authenticate, authorize(["admin"])
 // Reporting Routes
 router.get("/reports", authenticate, authorize(["admin", "report_viewer"]), reportController.getReports);
 router.get("/reports/registers", authenticate, authorize(["admin", "report_viewer"]), reportController.getRegisters);
+
+// Superadmin Routes
+router.get("/superadmin/mills", authenticate, authorize(["superadmin"]), superadminController.getMills);
+router.post("/superadmin/mills", authenticate, authorize(["superadmin"]), superadminController.createMill);
+router.put("/superadmin/mills/:id/status", authenticate, authorize(["superadmin"]), superadminController.updateMillStatus);
 
 module.exports = router;

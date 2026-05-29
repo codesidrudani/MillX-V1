@@ -145,12 +145,15 @@ const getReports = async (req, res) => {
     const { startDate, endDate, showSubtype, showScientificName, groupByMonth, year } = req.query;
 
     const allLogs = await prisma.logInventory.findMany({
+      where: { millId: req.user.millId },
       include: { incomingBatch: true, timberType: true, usages: { include: { outgoingBatch: true } } }
     });
     const allSizeInv = await prisma.sawnSizeInventory.findMany({
+      where: { millId: req.user.millId },
       include: { incomingBatch: true, timberType: true, usages: { include: { outgoingBatch: true } } }
     });
     const allProduced = await prisma.outgoingSawnSize.findMany({
+      where: { millId: req.user.millId },
       include: { outgoingBatch: true, timberType: true }
     });
 
@@ -198,10 +201,10 @@ const getReports = async (req, res) => {
   }
 };
 
-const generateRegistersForPeriod = async (start, end, showScientificName, showSubtype) => {
+const generateRegistersForPeriod = async (start, end, showScientificName, showSubtype, millId) => {
   // Form 44a: Intake (Incoming Logs)
   const logsIntake = await prisma.logInventory.findMany({
-    where: { incomingBatch: { date: { gte: start, lte: end } } },
+    where: { millId, incomingBatch: { date: { gte: start, lte: end } } },
     include: { incomingBatch: { include: { party: true } }, timberType: true },
     orderBy: { incomingBatch: { date: 'asc' } }
   });
@@ -238,7 +241,7 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
 
   // Form 44b: Out-turn (Outgoing Sizes)
   const sizesOutturn = await prisma.outgoingSawnSize.findMany({
-    where: { outgoingBatch: { date: { gte: start, lte: end } } },
+    where: { millId, outgoingBatch: { date: { gte: start, lte: end } } },
     include: { 
       outgoingBatch: {
         include: {
@@ -320,7 +323,7 @@ const getRegisters = async (req, res) => {
       const yearStart = new Date(targetYear, 0, 1);
       const yearEnd = new Date(targetYear, 11, 31, 23, 59, 59, 999);
 
-      const yearlyTotal = await generateRegistersForPeriod(yearStart, yearEnd, showScientificName, showSubtype);
+      const yearlyTotal = await generateRegistersForPeriod(yearStart, yearEnd, showScientificName, showSubtype, req.user.millId);
       
       const monthly = [];
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -328,7 +331,7 @@ const getRegisters = async (req, res) => {
       for (let i = 0; i < 12; i++) {
         const mStart = new Date(targetYear, i, 1);
         const mEnd = new Date(targetYear, i + 1, 0, 23, 59, 59, 999);
-        const mData = await generateRegistersForPeriod(mStart, mEnd, showScientificName, showSubtype);
+        const mData = await generateRegistersForPeriod(mStart, mEnd, showScientificName, showSubtype, req.user.millId);
         monthly.push({
           monthName: `${monthNames[i]} ${targetYear}`,
           form44a: mData.form44a,
@@ -346,7 +349,7 @@ const getRegisters = async (req, res) => {
       const end = endDate ? new Date(endDate) : new Date();
       end.setHours(23, 59, 59, 999);
 
-      const singleRegister = await generateRegistersForPeriod(start, end, showScientificName, showSubtype);
+      const singleRegister = await generateRegistersForPeriod(start, end, showScientificName, showSubtype, req.user.millId);
       return res.json({
         isGrouped: false,
         form44a: singleRegister.form44a,

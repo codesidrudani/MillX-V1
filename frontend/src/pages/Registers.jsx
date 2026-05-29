@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { useAuth } from '../store/useAuth';
 import { Download, Calendar, FileText, Table as TableIcon } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
@@ -7,6 +8,9 @@ import 'jspdf-autotable';
 import { formatDate } from '../utils/dateFormatter';
 
 const Registers = () => {
+  const { user } = useAuth();
+  const millTitle = user?.mill ? `M/s ${user.mill.name}${user.mill.address ? ', ' + user.mill.address : ''}` : '';
+  
   const [data, setData] = useState({ form44a: [], form44b: [], yearlyTotal: null, monthly: null, isGrouped: false });
   const [loading, setLoading] = useState(true);
 
@@ -298,18 +302,31 @@ const Registers = () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(is44a ? 'Form 44a' : 'Form 44b');
 
+    let currentStartRow = 1;
+
     // Master Headers
     if (is44a) {
-      sheet.mergeCells('A1:L1');
-      sheet.getCell('A1').value = "(KARNATAKA FOREST RULES, 1969)";
-      sheet.mergeCells('A2:L2');
-      sheet.getCell('A2').value = "FORM 44 [164(3)]";
-      sheet.mergeCells('A3:L3');
-      sheet.getCell('A3').value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
-      sheet.mergeCells('A4:L4');
-      sheet.getCell('A4').value = "IN-TAKE";
+      if (millTitle) {
+        sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
+        sheet.getCell(`A${currentStartRow}`).value = millTitle;
+        sheet.getCell(`A${currentStartRow}`).font = { bold: true, size: 14 };
+        sheet.getCell(`A${currentStartRow}`).alignment = { horizontal: 'center' };
+        currentStartRow++;
+      }
+      sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "(KARNATAKA FOREST RULES, 1969)";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "FORM 44 [164(3)]";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "IN-TAKE";
 
-      [1, 2, 3, 4].forEach(r => {
+      const startHeaderRow = currentStartRow - 3; // The top line of the standard KFD headers
+      [startHeaderRow, startHeaderRow + 1, startHeaderRow + 2, startHeaderRow + 3].forEach(r => {
         for (let c = 1; c <= 12; c++) {
           const cell = sheet.getCell(r, c);
           if (c === 1) {
@@ -317,8 +334,8 @@ const Registers = () => {
             cell.alignment = { horizontal: 'center' };
           }
           const b = {};
-          if (r === 1) b.top = { style: 'medium' };
-          if (r === 4) b.bottom = { style: 'medium' };
+          if (r === startHeaderRow) b.top = { style: 'medium' };
+          if (r === startHeaderRow + 3) b.bottom = { style: 'medium' };
           if (c === 12) b.left = { style: 'medium' };
           if (c === 12) b.right = { style: 'medium' };
           if (Object.keys(b).length > 0) {
@@ -331,19 +348,33 @@ const Registers = () => {
       sheet.getColumn(4).width = 15;
       sheet.getColumn(5).width = 15;
       sheet.getColumn(12).width = 20;
+      currentStartRow += 2; // return the next startRow dynamically based on header size
     } else {
-      sheet.mergeCells('A1:I1');
-      sheet.getCell('A1').value = "KARNATAKA FOREST DEPARTMENT";
-      sheet.mergeCells('A2:I2');
-      sheet.getCell('A2').value = "(KARNATAKA FOREST RULES, 1969)";
-      sheet.mergeCells('A3:I3');
-      sheet.getCell('A3').value = "FORM 44 [164(3)]";
-      sheet.mergeCells('A4:I4');
-      sheet.getCell('A4').value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
-      sheet.mergeCells('A5:I5');
-      sheet.getCell('A5').value = "Out-turn and delivery";
+      if (millTitle) {
+        sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+        sheet.getCell(`A${currentStartRow}`).value = millTitle;
+        sheet.getCell(`A${currentStartRow}`).font = { bold: true, size: 14 };
+        sheet.getCell(`A${currentStartRow}`).alignment = { horizontal: 'center' };
+        currentStartRow++;
+      }
+      sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "KARNATAKA FOREST DEPARTMENT";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "(KARNATAKA FOREST RULES, 1969)";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "FORM 44 [164(3)]";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
+      currentStartRow++;
+      sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
+      sheet.getCell(`A${currentStartRow}`).value = "Out-turn and delivery";
 
-      [1, 2, 3, 4, 5].forEach(r => {
+      const startHeaderRow = currentStartRow - 4;
+
+      [startHeaderRow, startHeaderRow + 1, startHeaderRow + 2, startHeaderRow + 3, startHeaderRow + 4].forEach(r => {
         for (let c = 1; c <= 9; c++) {
           const cell = sheet.getCell(r, c);
           if (c === 1) {
@@ -351,8 +382,8 @@ const Registers = () => {
             cell.alignment = { horizontal: 'center' };
           }
           const b = {};
-          if (r === 1) b.top = { style: 'medium' };
-          if (r === 5) b.bottom = { style: 'medium' };
+          if (r === startHeaderRow) b.top = { style: 'medium' };
+          if (r === startHeaderRow + 4) b.bottom = { style: 'medium' };
           if (c === 1) b.left = { style: 'thin' };
           if (c === 9) b.right = { style: 'medium' };
           if (Object.keys(b).length > 0) {
@@ -365,9 +396,8 @@ const Registers = () => {
       sheet.getColumn(7).width = 20;
       sheet.getColumn(8).width = 25;
       sheet.getColumn(9).width = 15;
+      currentStartRow += 2;
     }
-
-    let currentStartRow = is44a ? 6 : 7;
 
     if (data.isGrouped) {
       data.monthly.forEach((monthData) => {
@@ -385,7 +415,12 @@ const Registers = () => {
 
     // Print setup
     sheet.pageSetup.printArea = `A1:${is44a ? 'L' : 'I'}${currentStartRow - 1}`;
-    sheet.pageSetup.printTitlesRow = `${is44a ? '7:7' : '8:8'}`;
+    
+    // Calculate print titles row based on whether millTitle is present
+    const baseTitlesRow = is44a ? 7 : 8;
+    const printTitlesRow = millTitle ? baseTitlesRow + 1 : baseTitlesRow;
+    sheet.pageSetup.printTitlesRow = `${printTitlesRow}:${printTitlesRow}`;
+    
     sheet.pageSetup.fitToPage = true;
     sheet.pageSetup.fitToWidth = 1;
     sheet.pageSetup.fitToHeight = 0;
@@ -404,19 +439,27 @@ const Registers = () => {
 
     const drawHeader = (docData) => {
       if (docData.pageNumber === 1) {
+        let currentY = 10;
+        if (millTitle) {
+          doc.setFontSize(14);
+          doc.setFont(undefined, 'bold');
+          doc.text(millTitle, doc.internal.pageSize.width / 2, currentY, { align: 'center' });
+          currentY += 10;
+        }
+
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         if (is44a) {
-          doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, 10, { align: 'center' });
-          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, 15, { align: 'center' });
-          doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, 20, { align: 'center' });
-          doc.text("IN-TAKE", doc.internal.pageSize.width / 2, 25, { align: 'center' });
+          doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, currentY, { align: 'center' });
+          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY + 5, { align: 'center' });
+          doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, currentY + 10, { align: 'center' });
+          doc.text("IN-TAKE", doc.internal.pageSize.width / 2, currentY + 15, { align: 'center' });
         } else {
-          doc.text("KARNATAKA FOREST DEPARTMENT", doc.internal.pageSize.width / 2, 10, { align: 'center' });
-          doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, 15, { align: 'center' });
-          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, 20, { align: 'center' });
-          doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, 25, { align: 'center' });
-          doc.text("Out-turn and delivery", doc.internal.pageSize.width / 2, 30, { align: 'center' });
+          doc.text("KARNATAKA FOREST DEPARTMENT", doc.internal.pageSize.width / 2, currentY, { align: 'center' });
+          doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, currentY + 5, { align: 'center' });
+          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY + 10, { align: 'center' });
+          doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, currentY + 15, { align: 'center' });
+          doc.text("Out-turn and delivery", doc.internal.pageSize.width / 2, currentY + 20, { align: 'center' });
         }
       }
     };
@@ -482,13 +525,13 @@ const Registers = () => {
         theme: 'grid',
         headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], halign: 'center', valign: 'middle', lineWidth: 0.1, lineColor: [0, 0, 0], fontSize: 8 },
         bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0], fontSize: 8 },
-        margin: { top: 35 },
+        margin: { top: millTitle ? 45 : 35 },
         didDrawPage: drawHeader
       });
       return doc.lastAutoTable.finalY + 15;
     };
 
-    let startY = 35;
+    let startY = millTitle ? 45 : 35;
 
     if (data.isGrouped) {
       let currentY = startY;

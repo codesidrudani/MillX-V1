@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../store/useAuth';
 import api from '../utils/api';
 import { formatDate } from '../utils/dateFormatter';
-import { Activity, Package, Truck, Layers, LogOut } from 'lucide-react';
+import { Activity, Package, Truck, Layers, LogOut, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SuperAdminDashboard from './SuperAdminDashboard';
 
 const StatCard = ({ title, value, icon: Icon, trend }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
@@ -28,6 +29,11 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Superadmin gets a completely different dashboard
+  if (user?.role === 'superadmin') {
+    return <SuperAdminDashboard />;
+  }
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -46,6 +52,13 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
+          {user?.mill && (
+            <div className="flex items-center space-x-2 text-forest-700 mb-1">
+              <Building2 className="w-4 h-4" />
+              <span className="text-sm font-semibold">{user.mill.name}</span>
+              {user.mill.address && <span className="text-xs text-gray-400">• {user.mill.address}</span>}
+            </div>
+          )}
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500">Welcome back, {user?.name}</p>
         </div>

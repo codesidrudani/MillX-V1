@@ -11,7 +11,10 @@ const login = async (req, res) => {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      include: { mill: true }
+    });
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
@@ -19,6 +22,10 @@ const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (user.mill && user.mill.status === 'FROZEN') {
+      return res.status(403).json({ error: "PAYMENT_PENDING" });
     }
 
     const token = jwt.sign(
@@ -34,6 +41,11 @@ const login = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        mill: user.mill ? {
+          id: user.mill.id,
+          name: user.mill.name,
+          address: user.mill.address,
+        } : null
       },
     });
   } catch (error) {

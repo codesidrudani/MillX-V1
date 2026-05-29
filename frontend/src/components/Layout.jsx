@@ -21,6 +21,10 @@ const Layout = () => {
       { name: 'Dashboard', icon: <Home className="w-5 h-5" />, path: '/' }
     ];
 
+    if (role === 'superadmin') {
+      return items; // Superadmin only sees dashboard
+    }
+
     if (role === 'admin' || role === 'data_entry') {
       items.push({ name: 'Data Entry', icon: <Database className="w-5 h-5" />, path: '/data-entry' });
     }

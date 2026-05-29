@@ -5,8 +5,8 @@ const prisma = new PrismaClient();
 const getAllMasters = async (req, res) => {
   try {
     const [timberTypes, parties] = await Promise.all([
-      prisma.timberType.findMany(),
-      prisma.party.findMany(),
+      prisma.timberType.findMany({ where: { millId: req.user.millId } }),
+      prisma.party.findMany({ where: { millId: req.user.millId } }),
     ]);
 
     res.json({
@@ -24,7 +24,7 @@ const createMasterCRUD = (model) => {
   return {
     getAll: async (req, res) => {
       try {
-        const data = await prisma[model].findMany();
+        const data = await prisma[model].findMany({ where: { millId: req.user.millId } });
         res.json(data);
       } catch (error) {
         res.status(500).json({ error: "Internal server error" });
@@ -32,7 +32,8 @@ const createMasterCRUD = (model) => {
     },
     create: async (req, res) => {
       try {
-        const data = await prisma[model].create({ data: req.body });
+        const payload = { ...req.body, millId: req.user.millId };
+        const data = await prisma[model].create({ data: payload });
         res.status(201).json(data);
       } catch (error) {
         console.error(`Error creating ${model}:`, error);
@@ -42,7 +43,7 @@ const createMasterCRUD = (model) => {
     update: async (req, res) => {
       try {
         const data = await prisma[model].update({
-          where: { id: parseInt(req.params.id) },
+          where: { id: parseInt(req.params.id), millId: req.user.millId },
           data: req.body,
         });
         res.json(data);
@@ -53,7 +54,7 @@ const createMasterCRUD = (model) => {
     delete: async (req, res) => {
       try {
         await prisma[model].delete({
-          where: { id: parseInt(req.params.id) },
+          where: { id: parseInt(req.params.id), millId: req.user.millId },
         });
         res.json({ success: true });
       } catch (error) {

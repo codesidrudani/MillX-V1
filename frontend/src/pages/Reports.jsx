@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { useAuth } from '../store/useAuth';
 import { Download, Filter, Search, Calendar, FileText, Table as TableIcon } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
@@ -7,6 +8,8 @@ import 'jspdf-autotable';
 import { formatDate } from '../utils/dateFormatter';
 
 const Reports = () => {
+  const { user } = useAuth();
+  const millTitle = user?.mill ? `M/s ${user.mill.name}${user.mill.address ? ', ' + user.mill.address : ''}` : 'Mill Report';
   const [data, setData] = useState({ roundLogs: [], sawnSizes: [], yearlyTotal: null, monthly: null, isGrouped: false });
   const [loading, setLoading] = useState(true);
   
@@ -170,7 +173,7 @@ const Reports = () => {
 
     sheet.mergeCells('A1:K1'); 
     const titleCell = sheet.getCell('A1');
-    titleCell.value = "M/s PATEL & COMPANY, JOG ROAD SAGAR-577401";
+    titleCell.value = millTitle;
     titleCell.font = { bold: true, size: 12 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getCell('A1').border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
@@ -221,7 +224,7 @@ const Reports = () => {
 
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
-    doc.text("M/s PATEL & COMPANY, JOG ROAD SAGAR-577401", doc.internal.pageSize.width / 2, 15, { align: 'center' });
+    doc.text(millTitle, doc.internal.pageSize.width / 2, 15, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');

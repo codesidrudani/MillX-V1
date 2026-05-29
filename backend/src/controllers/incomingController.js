@@ -39,19 +39,21 @@ const createIncomingBatch = async (req, res) => {
     const batch = await prisma.$transaction(async (tx) => {
       const b = await tx.incomingBatch.create({
         data: {
+          millId: req.user.millId,
           date: new Date(date),
           permitNo,
           source: source || null,
           sourceType: sourceType || null,
           partyId: parseInt(partyId),
-          logs: { create: logsData },
-          sawnSizes: { create: sawnSizesData }
+          logs: { create: logsData.map(d => ({ ...d, millId: req.user.millId })) },
+          sawnSizes: { create: sawnSizesData.map(d => ({ ...d, millId: req.user.millId })) }
         },
         include: { logs: true, sawnSizes: true, party: true }
       });
 
       await tx.auditLog.create({
         data: {
+          millId: req.user.millId,
           userId: req.user.id,
           action: 'CREATE',
           entity: 'IncomingBatch',
@@ -74,11 +76,11 @@ const getInStockInventory = async (req, res) => {
   try {
     const [logs, sawnSizes] = await Promise.all([
       prisma.logInventory.findMany({
-        where: { status: 'IN_STOCK' },
+        where: { status: 'IN_STOCK', millId: req.user.millId },
         include: { incomingBatch: { include: { party: true } } }
       }),
       prisma.sawnSizeInventory.findMany({
-        where: { status: 'IN_STOCK' },
+        where: { status: 'IN_STOCK', millId: req.user.millId },
         include: { incomingBatch: { include: { party: true } } }
       })
     ]);

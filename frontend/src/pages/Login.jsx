@@ -22,7 +22,12 @@ const Login = () => {
       login(res.data.user, res.data.token);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to login');
+      const errMsg = err.response?.data?.error;
+      if (errMsg === 'PAYMENT_PENDING') {
+        setError('PAYMENT_PENDING');
+      } else {
+        setError(errMsg || 'Failed to login');
+      }
     } finally {
       setLoading(false);
     }
@@ -49,11 +54,16 @@ const Login = () => {
       <div className="relative mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-white py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
+            {error && error === 'PAYMENT_PENDING' ? (
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-md">
+                <p className="text-sm font-bold text-amber-800">⚠️ Payment Pending</p>
+                <p className="text-sm text-amber-700 mt-1">Your mill account has been frozen due to pending payment. Please contact the administrator to restore access.</p>
+              </div>
+            ) : error ? (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
                 <p className="text-sm text-red-700">{error}</p>
               </div>
-            )}
+            ) : null}
             
             <div>
               <label className="block text-sm font-medium text-gray-700">

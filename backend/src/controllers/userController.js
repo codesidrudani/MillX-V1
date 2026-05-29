@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
+      where: { millId: req.user.millId },
       select: {
         id: true,
         email: true,
@@ -46,6 +47,7 @@ const createUser = async (req, res) => {
         password: hashedPassword,
         name,
         role,
+        millId: req.user.millId,
       },
       select: {
         id: true,

@@ -156,9 +156,12 @@ const generateReportForPeriod = (start, end, allLogs, allSizeInv, allProduced, s
     g.closingReepers = g.openingReepers + g.productionReepers - g.outgoingReepers;
   });
 
+  const sortedRoundLogs = Object.values(logGroups).sort((a, b) => a.key.localeCompare(b.key));
+  const sortedSawnSizes = Object.values(sizeGroups).sort((a, b) => a.key.localeCompare(b.key));
+
   return {
-    roundLogs: Object.values(logGroups),
-    sawnSizes: Object.values(sizeGroups)
+    roundLogs: sortedRoundLogs,
+    sawnSizes: sortedSawnSizes
   };
 };
 
@@ -347,6 +350,16 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
       });
     }
   });
+
+  form44a.sort((a, b) => new Date(a.dateOfReceipt) - new Date(b.dateOfReceipt));
+  form43a.sort((a, b) => new Date(a.dateOfReceipt) - new Date(b.dateOfReceipt));
+  form44b.sort((a, b) => new Date(a.dateOfIssue) - new Date(b.dateOfIssue));
+  form43b.sort((a, b) => new Date(a.dateOfIssue) - new Date(b.dateOfIssue));
+
+  form44a.forEach((item, index) => item.slNo = index + 1);
+  form43a.forEach((item, index) => item.slNo = index + 1);
+  form44b.forEach((item, index) => item.slNo = index + 1);
+  form43b.forEach((item, index) => item.slNo = index + 1);
 
   return { form44a, form44b, form43a, form43b };
 };

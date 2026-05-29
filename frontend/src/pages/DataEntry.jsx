@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 
 const IncomingForm = ({ masters, fetchInventory }) => {
   const [mode, setMode] = useState('log');
+  const [isMetric, setIsMetric] = useState(true);
   const [header, setHeader] = useState({ date: new Date().toISOString().split('T')[0], permitNo: '', partyId: '', source: '', sourceType: '' });
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ const IncomingForm = ({ masters, fetchInventory }) => {
       const l = parseFloat(newItems[index].length) || 0;
       const g = parseFloat(newItems[index].girth) || 0;
       if (l > 0 && g > 0) {
-        newItems[index].volume = ((l * g * g) / 16).toFixed(4);
+        newItems[index].volume = (isMetric ? ((l * g * g) / 16) : ((l * g * g) / 2304)).toFixed(3);
       }
     } else if (mode === 'sawn_size') {
       if (field === 'isReeper') {
@@ -54,10 +55,36 @@ const IncomingForm = ({ masters, fetchInventory }) => {
         const l = parseFloat(newItems[index].length) || 0;
         const q = parseInt(newItems[index].quantity) || 1;
         if (t > 0 && w > 0 && l > 0) {
-          newItems[index].volume = (t * w * l * q).toFixed(4);
+          newItems[index].volume = (t * w * l * q).toFixed(3);
         }
       }
     }
+    setItems(newItems);
+  };
+
+  const toggleMetric = (checked) => {
+    setIsMetric(checked);
+    const newItems = items.map(item => {
+      let vol = item.volume;
+      if (mode === 'log') {
+        const l = parseFloat(item.length) || 0;
+        const g = parseFloat(item.girth) || 0;
+        if (l > 0 && g > 0) {
+          vol = (checked ? ((l * g * g) / 16) : ((l * g * g) / 2304)).toFixed(3);
+        }
+      } else if (mode === 'sawn_size') {
+        if (!item.isReeper) {
+          const t = parseFloat(item.thickness) || 0;
+          const w = parseFloat(item.width) || 0;
+          const l = parseFloat(item.length) || 0;
+          const q = parseInt(item.quantity) || 1;
+          if (t > 0 && w > 0 && l > 0) {
+            vol = (t * w * l * q).toFixed(3);
+          }
+        }
+      }
+      return { ...item, volume: vol };
+    });
     setItems(newItems);
   };
 
@@ -86,9 +113,15 @@ const IncomingForm = ({ masters, fetchInventory }) => {
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-gray-900">Record Incoming Batch</h2>
-          <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
-            <button type="button" onClick={() => { setMode('log'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Round Logs</button>
-            <button type="button" onClick={() => { setMode('sawn_size'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Sawn Sizes</button>
+          <div className="flex items-center space-x-6">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" checked={isMetric} onChange={(e) => toggleMetric(e.target.checked)} className="h-4 w-4 rounded text-forest-600 focus:ring-forest-500 border-gray-300" />
+              <span className="text-sm font-medium text-gray-700">Use Meters</span>
+            </label>
+            <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+              <button type="button" onClick={() => { setMode('log'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Round Logs</button>
+              <button type="button" onClick={() => { setMode('sawn_size'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Sawn Sizes</button>
+            </div>
           </div>
         </div>
         
@@ -149,16 +182,16 @@ const IncomingForm = ({ masters, fetchInventory }) => {
                   {mode === 'log' ? (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Log No.</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Length (ft)</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Girth (in)</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Length {isMetric ? '(m)' : '(ft)'}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Girth {isMetric ? '(m)' : '(in)'}</th>
                     </>
                   ) : (
                     <>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Reeper?</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Dimensions / R.Feet</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Dimensions {isMetric ? '(m)' : '(ft)'} / R.Feet</th>
                     </>
                   )}
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">{mode === 'log' ? 'Volume (cft)' : 'Vol/Qty'}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">{mode === 'log' ? `Volume ${isMetric ? '(cbm)' : '(cft)'}` : `Vol/Qty ${isMetric ? '(cbm)' : '(cft)'}`}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -228,6 +261,7 @@ const IncomingForm = ({ masters, fetchInventory }) => {
 
 const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
   const [mode, setMode] = useState('log');
+  const [isMetric, setIsMetric] = useState(true);
   const [header, setHeader] = useState({ date: new Date().toISOString().split('T')[0], permitNo: '', vehicleNo: '', partyId: '' });
   const [utilizedItemIds, setUtilizedItemIds] = useState([]);
   const [producedSizes, setProducedSizes] = useState([]);
@@ -285,9 +319,27 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
       const l = parseFloat(newSizes[index].length) || 0;
       const q = parseInt(newSizes[index].quantity) || 1;
       if (t > 0 && w > 0 && l > 0) {
-        newSizes[index].totalVolume = (t * w * l * q).toFixed(4);
+        newSizes[index].totalVolume = (t * w * l * q).toFixed(3);
       }
     }
+    setProducedSizes(newSizes);
+  };
+
+  const toggleMetric = (checked) => {
+    setIsMetric(checked);
+    const newSizes = producedSizes.map(size => {
+      let vol = size.totalVolume;
+      if (!size.isReeper) {
+        const t = parseFloat(size.thickness) || 0;
+        const w = parseFloat(size.width) || 0;
+        const l = parseFloat(size.length) || 0;
+        const q = parseInt(size.quantity) || 1;
+        if (t > 0 && w > 0 && l > 0) {
+          vol = (t * w * l * q).toFixed(3);
+        }
+      }
+      return { ...size, totalVolume: vol };
+    });
     setProducedSizes(newSizes);
   };
 
@@ -317,9 +369,15 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-gray-900">Record Outgoing / Sawing Batch</h2>
-          <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
-            <button type="button" onClick={() => { setMode('log'); setUtilizedItemIds([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Utilize Logs</button>
-            <button type="button" onClick={() => { setMode('sawn_size'); setUtilizedItemIds([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Utilize Sizes</button>
+          <div className="flex items-center space-x-6">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" checked={isMetric} onChange={(e) => toggleMetric(e.target.checked)} className="h-4 w-4 rounded text-forest-600 focus:ring-forest-500 border-gray-300" />
+              <span className="text-sm font-medium text-gray-700">Use Meters</span>
+            </label>
+            <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+              <button type="button" onClick={() => { setMode('log'); setUtilizedItemIds([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Utilize Logs</button>
+              <button type="button" onClick={() => { setMode('sawn_size'); setUtilizedItemIds([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Utilize Sizes</button>
+            </div>
           </div>
         </div>
         
@@ -407,8 +465,8 @@ const OutgoingForm = ({ masters, inventory, fetchInventory }) => {
 
           <div className="flex space-x-2 px-2 mb-1 text-xs font-medium text-gray-500">
              <span className="w-8">Reeper?</span>
-             <span className="flex-1 text-center">Dimensions / R.Feet</span>
-             <span className="w-20 text-right">Vol/Qty</span>
+             <span className="flex-1 text-center">Dimensions {isMetric ? '(m)' : '(ft)'} / R.Feet</span>
+             <span className="w-20 text-right">Vol/Qty {isMetric ? '(cbm)' : '(cft)'}</span>
           </div>
 
           {producedSizes.length === 0 ? (

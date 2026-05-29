@@ -28,7 +28,7 @@ router.delete("/users/:id", authenticate, authorize(["admin"]), userController.d
 router.get("/dashboard", authenticate, dashboardController.getDashboardStats);
 
 // Master Routes
-['timberType', 'party'].forEach(master => {
+['timberType', 'party', 'source', 'sourceType'].forEach(master => {
   router.get(`/${master}`, authenticate, masterController[master].getAll);
   router.post(`/${master}`, authenticate, authorize(["admin"]), masterController[master].create);
   router.put(`/${master}/:id`, authenticate, authorize(["admin"]), masterController[master].update);

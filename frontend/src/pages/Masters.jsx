@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { Settings, Plus, Trash2 } from 'lucide-react';
+import { Settings, Plus, Trash2, Edit2 } from 'lucide-react';
 
 const categoryMap = {
   'Timber Types': { endpoint: 'timberType', fields: [{ name: 'name', label: 'Type Name' }, { name: 'scientificName', label: 'Scientific Name' }, { name: 'description', label: 'Description' }] },
-  'Parties': { endpoint: 'party', fields: [{ name: 'name', label: 'Name' }, { name: 'contact', label: 'Contact No.' }, { name: 'address', label: 'Address' }, { name: 'partyType', label: 'Party Type', type: 'select', options: ['Private', 'Government'] }] },
+  'Parties': { endpoint: 'party', fields: [{ name: 'name', label: 'Name' }, { name: 'contact', label: 'Contact No.' }, { name: 'address', label: 'Address' }, { name: 'partyType', label: 'Party Type', type: 'select', options: ['Private', 'Government'] }, { name: 'isSelf', label: 'Is Self?', type: 'checkbox' }] },
+  'Sources': { endpoint: 'source', fields: [{ name: 'name', label: 'Source Name (State)' }] },
+  'Source Types': { endpoint: 'sourceType', fields: [{ name: 'name', label: 'Source Type (e.g. Govt, Private)' }] },
 };
 
 const Masters = () => {
@@ -12,6 +14,7 @@ const Masters = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [error, setError] = useState('');
 
@@ -32,24 +35,38 @@ const Masters = () => {
   useEffect(() => {
     fetchData();
     setIsAdding(false);
+    setEditingId(null);
     setFormData({});
     setError('');
   }, [activeCategory]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post(`/${currentConfig.endpoint}`, formData);
+      if (editingId) {
+        await api.put(`/${currentConfig.endpoint}/${editingId}`, formData);
+      } else {
+        await api.post(`/${currentConfig.endpoint}`, formData);
+      }
       setIsAdding(false);
+      setEditingId(null);
       setFormData({});
       fetchData();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save');
     }
+  };
+
+  const handleEdit = (item) => {
+    setFormData(item);
+    setEditingId(item.id);
+    setIsAdding(true);
+    setError('');
   };
 
   const handleDelete = async (id) => {
@@ -97,11 +114,14 @@ const Masters = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+        <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">{activeCategory}</h2>
             <button 
-              onClick={() => setIsAdding(!isAdding)}
+              onClick={() => { 
+                setIsAdding(!isAdding); 
+                if (isAdding) { setEditingId(null); setFormData({}); } 
+              }}
               className="flex items-center space-x-1 px-3 py-1.5 bg-forest-50 text-forest-600 hover:bg-forest-100 rounded-md text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -118,27 +138,39 @@ const Masters = () => {
           <div className="flex-1 p-6">
             {isAdding && (
               <form onSubmit={handleSubmit} className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Add new {activeCategory.slice(0, -1)}</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-4">{editingId ? 'Edit' : 'Add new'} {activeCategory.slice(0, -1)}</h3>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {currentConfig.fields.map(field => (
                     <div key={field.name}>
                       <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
                       {field.type === 'select' ? (
                         <select
+                          name={field.name}
                           required
                           value={formData[field.name] || ''}
-                          onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                          onChange={handleInputChange}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm"
                         >
                           <option value="">Select...</option>
                           {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
+                      ) : field.type === 'checkbox' ? (
+                        <div className="flex items-center h-10">
+                          <input
+                            type="checkbox"
+                            name={field.name}
+                            checked={!!formData[field.name]}
+                            onChange={handleInputChange}
+                            className="h-4 w-4 text-forest-600 focus:ring-forest-500 border-gray-300 rounded"
+                          />
+                        </div>
                       ) : (
                         <input
                           type="text"
+                          name={field.name}
                           required={field.name !== 'description' && field.name !== 'scientificName'}
                           value={formData[field.name] || ''}
-                          onChange={(e) => setFormData({ ...formData, [field.name]: e.target.value })}
+                          onChange={handleInputChange}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-forest-500 focus:border-forest-500 sm:text-sm"
                         />
                       )}
@@ -146,7 +178,7 @@ const Masters = () => {
                   ))}
                 </div>
                 <div className="mt-4 flex justify-end space-x-3">
-                  <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                  <button type="button" onClick={() => { setIsAdding(false); setEditingId(null); setFormData({}); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
                   <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-forest-600 border border-transparent rounded-md hover:bg-forest-700">Save Record</button>
                 </div>
               </form>
@@ -177,10 +209,13 @@ const Masters = () => {
                       <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                         {currentConfig.fields.map(field => (
                           <td key={field.name} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item[field.name]}
+                            {field.type === 'checkbox' ? (item[field.name] ? 'Yes' : 'No') : item[field.name]}
                           </td>
                         ))}
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button onClick={() => handleEdit(item)} className="text-forest-600 hover:text-forest-900 transition-colors p-2 hover:bg-forest-50 rounded-full mr-2">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full">
                             <Trash2 className="w-4 h-4" />
                           </button>

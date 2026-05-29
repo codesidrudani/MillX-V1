@@ -14,6 +14,8 @@ const Records = () => {
   const [outgoing, setOutgoing] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [parties, setParties] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [timberTypes, setTimberTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
   const [error, setError] = useState(null);
@@ -51,9 +53,10 @@ const Records = () => {
   useEffect(() => {
     fetchRecords();
     setExpandedRows({});
-    // Fetch timber types and parties for the add forms and editing
+    // Fetch timber types, parties, and sources for the add forms and editing
     api.get('/timberType').then(res => setTimberTypes(res.data)).catch(console.error);
     api.get('/party').then(res => setParties(res.data)).catch(console.error);
+    api.get('/source').then(res => setSources(res.data)).catch(console.error);
   }, [activeTab, startDate, endDate]);
 
   const toggleRow = (id) => {
@@ -248,7 +251,10 @@ const Records = () => {
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
                           {editingHeader.id === batch.id ? (
-                            <input type="text" value={editingHeader.data.source} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, source: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()} />
+                            <select value={editingHeader.data.source} onChange={e => setEditingHeader({...editingHeader, data: {...editingHeader.data, source: e.target.value}})} className="border border-gray-300 rounded px-2 py-1 w-24 text-sm focus:ring-forest-500 focus:border-forest-500" onClick={e => e.stopPropagation()}>
+                              <option value="">Select Source</option>
+                              {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                            </select>
                           ) : (batch.source || '-')}
                         </td>
                         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">{batch.logs.length + batch.sawnSizes.length} items</td>

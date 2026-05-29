@@ -234,7 +234,10 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
     orderBy: { incomingBatch: { date: 'asc' } }
   });
 
-  const form44a = logsIntake.map((log, index) => {
+  const form44a = [];
+  const form43a = [];
+  
+  logsIntake.forEach((log) => {
     let typeName = log.timberType?.name || '';
     if ((showScientificName === 'true' || showScientificName === true) && log.timberType?.scientificName) {
       typeName = log.timberType.scientificName;
@@ -248,8 +251,10 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
     const pName = log.incomingBatch.party?.name || '';
     const pAddr = log.incomingBatch.party?.address || '';
 
-    return {
-      slNo: index + 1,
+    const isSelf = log.incomingBatch.party?.isSelf;
+    const list = isSelf ? form43a : form44a;
+    list.push({
+      slNo: list.length + 1,
       partyNameAddress: [pName, pAddr].filter(Boolean).join(', '),
       partyName: pName,
       partyAddress: pAddr,
@@ -261,7 +266,7 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
       length: log.length,
       girth: log.girth,
       volume: log.volume
-    };
+    });
   });
 
   // Form 44b: Out-turn (Outgoing Sizes)
@@ -280,7 +285,10 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
     orderBy: { outgoingBatch: { date: 'asc' } }
   });
 
-  const form44b = sizesOutturn.map((size, index) => {
+  const form44b = [];
+  const form43b = [];
+  
+  sizesOutturn.forEach((size) => {
     let typeName = size.timberType?.name || '';
     if ((showScientificName === 'true' || showScientificName === true) && size.timberType?.scientificName) {
       typeName = size.timberType.scientificName;
@@ -303,10 +311,14 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
     const pName = size.outgoingBatch.party?.name || '';
     const pAddr = size.outgoingBatch.party?.address || '';
 
+    const isSelf = size.outgoingBatch.party?.isSelf;
+    const list = isSelf ? form43b : form44b;
+
     const baseData = {
-      slNo: index + 1, // Add slNo to match logic if needed
+      slNo: list.length + 1,
       timberType: typeName,
-      dateOfIssue: size.outgoingBatch.date, // keep for grouping
+      batchId: size.outgoingBatch.id,
+      dateOfIssue: size.outgoingBatch.date,
       outgoingPermitNo: size.outgoingBatch.permitNo || '',
       number: size.quantity || '',
       partyNameAddress: [pName, pAddr].filter(Boolean).join(', '),
@@ -316,27 +328,27 @@ const generateRegistersForPeriod = async (start, end, showScientificName, showSu
     };
 
     if (size.isReeper) {
-      return {
+      list.push({
         ...baseData,
         length: size.runningFeet || 0,
         width: '',
         thickness: '',
         volume: '',
         remarks: 'Reeper'
-      };
+      });
     } else {
-      return {
+      list.push({
         ...baseData,
         length: size.length || 0,
         width: size.width || 0,
         thickness: size.thickness || 0,
         volume: size.totalVolume || 0,
         remarks: ''
-      };
+      });
     }
   });
 
-  return { form44a, form44b };
+  return { form44a, form44b, form43a, form43b };
 };
 
 const getRegisters = async (req, res) => {
@@ -360,7 +372,9 @@ const getRegisters = async (req, res) => {
         monthly.push({
           monthName: `${monthNames[i]} ${targetYear}`,
           form44a: mData.form44a,
-          form44b: mData.form44b
+          form44b: mData.form44b,
+          form43a: mData.form43a,
+          form43b: mData.form43b
         });
       }
 
@@ -378,7 +392,9 @@ const getRegisters = async (req, res) => {
       return res.json({
         isGrouped: false,
         form44a: singleRegister.form44a,
-        form44b: singleRegister.form44b
+        form44b: singleRegister.form44b,
+        form43a: singleRegister.form43a,
+        form43b: singleRegister.form43b
       });
     }
   } catch (error) {

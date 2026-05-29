@@ -6,6 +6,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const IncomingForm = ({ masters, fetchInventory }) => {
   const [mode, setMode] = useState('log');
+  const [entryMethod, setEntryMethod] = useState('single');
+  const [bulkText, setBulkText] = useState('');
   const [isMetric, setIsMetric] = useState(true);
   const [header, setHeader] = useState({ date: new Date().toISOString().split('T')[0], permitNo: '', partyId: '', source: '', sourceType: '' });
   const [items, setItems] = useState([]);
@@ -90,6 +92,42 @@ const IncomingForm = ({ masters, fetchInventory }) => {
     setItems(newItems);
   };
 
+  const handleBulkParse = (e) => {
+    const text = e.target.value;
+    setBulkText(text);
+    if (!text.trim()) {
+      setItems([]);
+      return;
+    }
+    const rows = text.trim().split('\n');
+    const parsedItems = rows.map(row => {
+      const cols = row.split('\t');
+      const logNo = cols[0]?.trim() || '';
+      const typeStr = cols[1]?.trim() || '';
+      const length = cols[2]?.trim() || '';
+      const girth = cols[3]?.trim() || '';
+      let volume = cols[4]?.trim() || '';
+
+      let timberTypeId = '';
+      if (typeStr) {
+        const found = masters.timberTypes?.find(t => t.name.toLowerCase() === typeStr.toLowerCase());
+        if (found) timberTypeId = found.id;
+      }
+
+      if (!volume && length && girth) {
+        const l = parseFloat(length);
+        const g = parseFloat(girth);
+        if (l > 0 && g > 0) {
+          volume = (isMetric ? ((l * g * g) / 16) : ((l * g * g) / 2304)).toFixed(3);
+        }
+      }
+
+      return { logNo, timberTypeId, length, girth, volume };
+    }).filter(item => item.logNo || item.length || item.girth); // Filter empty rows
+
+    setItems(parsedItems);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!header.permitNo || !header.partyId || items.length === 0) {
@@ -100,6 +138,7 @@ const IncomingForm = ({ masters, fetchInventory }) => {
       await api.post('/incoming', { ...header, mode, items });
       setSuccess('Incoming batch saved successfully!');
       setItems([]);
+      setBulkText('');
       setHeader({ ...header, permitNo: '' });
       fetchInventory();
       setTimeout(() => setSuccess(''), 3000);
@@ -120,10 +159,16 @@ const IncomingForm = ({ masters, fetchInventory }) => {
               <input type="checkbox" checked={isMetric} onChange={(e) => toggleMetric(e.target.checked)} className="h-4 w-4 rounded text-forest-600 focus:ring-forest-500 border-gray-300" />
               <span className="text-sm font-medium text-gray-700">Use Meters</span>
             </label>
-            <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
-              <button type="button" onClick={() => { setMode('log'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Round Logs</button>
-              <button type="button" onClick={() => { setMode('sawn_size'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Sawn Sizes</button>
+            <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm mr-4">
+              <button type="button" onClick={() => { setEntryMethod('single'); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${entryMethod === 'single' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Single Entry</button>
+              <button type="button" onClick={() => { setEntryMethod('bulk'); setMode('log'); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${entryMethod === 'bulk' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Bulk Entry</button>
             </div>
+            {entryMethod === 'single' && (
+              <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+                <button type="button" onClick={() => { setMode('log'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'log' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Round Logs</button>
+                <button type="button" onClick={() => { setMode('sawn_size'); setItems([]); }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'sawn_size' ? 'bg-forest-100 text-forest-700' : 'text-gray-500 hover:text-gray-700'}`}>Sawn Sizes</button>
+              </div>
+            )}
           </div>
         </div>
         
@@ -153,19 +198,14 @@ const IncomingForm = ({ masters, fetchInventory }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Source (State)</label>
             <select name="source" required value={header.source} onChange={handleHeaderChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm">
               <option value="">Select Source</option>
-              <option value="Karnataka">Karnataka</option>
-              <option value="Maharashtra">Maharashtra</option>
-              <option value="Kerala">Kerala</option>
-              <option value="Gujarat">Gujarat</option>
-              <option value="Other">Other</option>
+              {masters.sources?.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Source Type</label>
             <select name="sourceType" required value={header.sourceType} onChange={handleHeaderChange} className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 sm:text-sm">
               <option value="">Select Type</option>
-              <option value="Private">Private</option>
-              <option value="Govt">Government</option>
+              {masters.sourceTypes?.map(st => <option key={st.id} value={st.name}>{st.name}</option>)}
             </select>
           </div>
         </div>
@@ -179,8 +219,22 @@ const IncomingForm = ({ masters, fetchInventory }) => {
           </button>
         </div>
 
-        {items.length === 0 ? (
+        {entryMethod === 'bulk' && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Paste Excel Data Here (Columns: Log No, Type, Length, Girth, Volume)</label>
+            <textarea
+              value={bulkText}
+              onChange={handleBulkParse}
+              placeholder="Paste data from excel..."
+              className="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-forest-500 focus:border-forest-500 font-mono text-sm whitespace-pre"
+            />
+          </div>
+        )}
+
+        {items.length === 0 && entryMethod === 'single' ? (
           <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">Click "Add Row" to start adding items.</div>
+        ) : items.length === 0 && entryMethod === 'bulk' ? (
+          <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">Paste data above to see preview here.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

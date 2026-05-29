@@ -25,6 +25,8 @@ model Mill {
   sawnSizeUsages    SawnSizeUsage[]
   outgoingSawnSizes OutgoingSawnSize[]
   auditLogs         AuditLog[]
+  sources           Source[]
+  sourceTypes       SourceType[]
 }
 
 model User {
@@ -76,9 +78,26 @@ model Party {
   contact       String?
   address       String?
   partyType     String? // e.g., 'Government', 'Private'
+  isSelf        Boolean         @default(false)
   createdAt     DateTime        @default(now())
   IncomingBatch IncomingBatch[]
   OutgoingBatch OutgoingBatch[]
+}
+
+model Source {
+  id        Int      @id @default(autoincrement())
+  millId    Int
+  mill      Mill     @relation(fields: [millId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model SourceType {
+  id        Int      @id @default(autoincrement())
+  millId    Int
+  mill      Mill     @relation(fields: [millId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
 }
 
 // --- INVENTORY & OPERATIONS ---

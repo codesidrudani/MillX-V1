@@ -4,14 +4,18 @@ const prisma = new PrismaClient();
 // GET all masters (helper to fetch all categories in one go for forms)
 const getAllMasters = async (req, res) => {
   try {
-    const [timberTypes, parties] = await Promise.all([
+    const [timberTypes, parties, sources, sourceTypes] = await Promise.all([
       prisma.timberType.findMany({ where: { millId: req.user.millId } }),
       prisma.party.findMany({ where: { millId: req.user.millId } }),
+      prisma.source.findMany({ where: { millId: req.user.millId } }),
+      prisma.sourceType.findMany({ where: { millId: req.user.millId } }),
     ]);
 
     res.json({
       timberTypes,
       parties,
+      sources,
+      sourceTypes,
     });
   } catch (error) {
     console.error("Error fetching masters:", error);
@@ -68,4 +72,6 @@ module.exports = {
   getAllMasters,
   timberType: createMasterCRUD('timberType'),
   party: createMasterCRUD('party'),
+  source: createMasterCRUD('source'),
+  sourceType: createMasterCRUD('sourceType'),
 };

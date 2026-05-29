@@ -13,10 +13,10 @@ const Registers = () => {
   const { user } = useAuth();
   const millTitle = user?.mill ? `M/s ${user.mill.name}${user.mill.address ? ', ' + user.mill.address : ''}` : '';
   
-  const [data, setData] = useState({ form44a: [], form44b: [], yearlyTotal: null, monthly: null, isGrouped: false });
+  const [data, setData] = useState({ form44a: [], form44b: [], form43a: [], form43b: [], yearlyTotal: null, monthly: null, isGrouped: false });
   const [loading, setLoading] = useState(true);
 
-  const [activeForm, setActiveForm] = useState('44a'); // '44a' or '44b'
+  const [activeForm, setActiveForm] = useState('44a'); // '44a', '44b', '43a', '43b'
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -46,7 +46,8 @@ const Registers = () => {
     fetchRegisters();
   }, [startDate, endDate, showScientificName, showSubtype, groupByMonth, year]);
 
-  const is44a = activeForm === '44a';
+  const is44a = activeForm === '44a' || activeForm === '43a';
+  const isForm43 = activeForm === '43a' || activeForm === '43b';
 
   const conversionRate = unit === 'cbm' ? 35.3147 : 1;
   const formatVol = (val) => val ? (parseFloat(val) / conversionRate).toFixed(3) : '';
@@ -62,9 +63,15 @@ const Registers = () => {
   // Determine what data to show in the UI table
   let tableData = [];
   if (data.isGrouped && data.yearlyTotal) {
-    tableData = is44a ? data.yearlyTotal.form44a : data.yearlyTotal.form44b;
+    if (activeForm === '44a') tableData = data.yearlyTotal.form44a || [];
+    else if (activeForm === '44b') tableData = data.yearlyTotal.form44b || [];
+    else if (activeForm === '43a') tableData = data.yearlyTotal.form43a || [];
+    else if (activeForm === '43b') tableData = data.yearlyTotal.form43b || [];
   } else {
-    tableData = is44a ? data.form44a : data.form44b;
+    if (activeForm === '44a') tableData = data.form44a || [];
+    else if (activeForm === '44b') tableData = data.form44b || [];
+    else if (activeForm === '43a') tableData = data.form43a || [];
+    else if (activeForm === '43b') tableData = data.form43b || [];
   }
 
   const processRegisterData = (rawData, isForm44a) => {
@@ -74,7 +81,7 @@ const Registers = () => {
     let currentSlNo = 1;
 
     rawData.forEach((row) => {
-      const key = isForm44a ? row.permitNo : `${row.dateOfIssue}-${row.number}`;
+      const key = isForm44a ? row.permitNo : row.batchId;
 
       if (currentKey !== null && key !== currentKey) {
         processed.push({ isTotalRow: true, totalVolume: groupTotal });
@@ -271,7 +278,7 @@ const Registers = () => {
           }
           currRow++;
         } else {
-          const key = `${row.dateOfIssue}-${row.number}`;
+          const key = row.batchId;
           const isSame = lastKey === key;
           if (!isSame) {
             groupStartRow = currRow;
@@ -301,7 +308,8 @@ const Registers = () => {
 
   const exportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(is44a ? 'Form 44a' : 'Form 44b');
+    const sheetName = isForm43 ? (is44a ? 'Form 43a' : 'Form 43b') : (is44a ? 'Form 44a' : 'Form 44b');
+    const sheet = workbook.addWorksheet(sheetName);
 
     let currentStartRow = 1;
 
@@ -318,7 +326,7 @@ const Registers = () => {
       sheet.getCell(`A${currentStartRow}`).value = "(KARNATAKA FOREST RULES, 1969)";
       currentStartRow++;
       sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
-      sheet.getCell(`A${currentStartRow}`).value = "FORM 44 [164(3)]";
+      sheet.getCell(`A${currentStartRow}`).value = isForm43 ? "FORM 43 [164(2)]" : "FORM 44 [164(3)]";
       currentStartRow++;
       sheet.mergeCells(`A${currentStartRow}:L${currentStartRow}`);
       sheet.getCell(`A${currentStartRow}`).value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
@@ -365,7 +373,7 @@ const Registers = () => {
       sheet.getCell(`A${currentStartRow}`).value = "(KARNATAKA FOREST RULES, 1969)";
       currentStartRow++;
       sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
-      sheet.getCell(`A${currentStartRow}`).value = "FORM 44 [164(3)]";
+      sheet.getCell(`A${currentStartRow}`).value = isForm43 ? "FORM 43 [164(2)]" : "FORM 44 [164(3)]";
       currentStartRow++;
       sheet.mergeCells(`A${currentStartRow}:I${currentStartRow}`);
       sheet.getCell(`A${currentStartRow}`).value = "REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK";
@@ -402,7 +410,11 @@ const Registers = () => {
 
     if (data.isGrouped) {
       data.monthly.forEach((monthData) => {
-        const mData = is44a ? monthData.form44a : monthData.form44b;
+        let mData = [];
+        if (activeForm === '44a') mData = monthData.form44a || [];
+        else if (activeForm === '44b') mData = monthData.form44b || [];
+        else if (activeForm === '43a') mData = monthData.form43a || [];
+        else if (activeForm === '43b') mData = monthData.form43b || [];
         if (mData.length > 0) {
           const title = `For the month of ${monthData.monthName}`;
           currentStartRow = appendExcelTable(sheet, title, mData, currentStartRow, is44a);
@@ -430,7 +442,8 @@ const Registers = () => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Form44${is44a ? 'a' : 'b'}_Register.xlsx`;
+    const formPrefix = isForm43 ? 'Form43' : 'Form44';
+    link.download = `${formPrefix}${is44a ? 'a' : 'b'}_Register.xlsx`;
     link.click();
     setShowExportMenu(false);
   };
@@ -451,14 +464,13 @@ const Registers = () => {
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         if (is44a) {
-          doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, currentY, { align: 'center' });
-          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY + 5, { align: 'center' });
+          doc.text(isForm43 ? "FORM 43 [164(2)]" : "FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY, { align: 'center' });
           doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, currentY + 10, { align: 'center' });
           doc.text("IN-TAKE", doc.internal.pageSize.width / 2, currentY + 15, { align: 'center' });
         } else {
           doc.text("KARNATAKA FOREST DEPARTMENT", doc.internal.pageSize.width / 2, currentY, { align: 'center' });
           doc.text("(KARNATAKA FOREST RULES, 1969)", doc.internal.pageSize.width / 2, currentY + 5, { align: 'center' });
-          doc.text("FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY + 10, { align: 'center' });
+          doc.text(isForm43 ? "FORM 43 [164(2)]" : "FORM 44 [164(3)]", doc.internal.pageSize.width / 2, currentY + 10, { align: 'center' });
           doc.text("REGISTER SHOWING THE INTAKE OF THE TIMBER UNDERTAKEN FOR SAWING ON JOB WORK", doc.internal.pageSize.width / 2, currentY + 15, { align: 'center' });
           doc.text("Out-turn and delivery", doc.internal.pageSize.width / 2, currentY + 20, { align: 'center' });
         }
@@ -507,7 +519,7 @@ const Registers = () => {
           if (row.isBlankRow) {
             return [{ content: '', colSpan: 9, styles: { fillColor: [250, 250, 250] } }];
           }
-          const key = `${row.dateOfIssue}-${row.number}`;
+          const key = row.batchId;
           const isSame = lastKey === key;
           lastKey = key;
           return [
@@ -537,7 +549,11 @@ const Registers = () => {
     if (data.isGrouped) {
       let currentY = startY;
       data.monthly.forEach((monthData) => {
-        const mData = is44a ? monthData.form44a : monthData.form44b;
+        let mData = [];
+        if (activeForm === '44a') mData = monthData.form44a || [];
+        else if (activeForm === '44b') mData = monthData.form44b || [];
+        else if (activeForm === '43a') mData = monthData.form43a || [];
+        else if (activeForm === '43b') mData = monthData.form43b || [];
         if (mData.length > 0) {
           const title = `For the month of ${monthData.monthName}`;
           currentY = generateTable(title, mData, currentY);
@@ -552,7 +568,8 @@ const Registers = () => {
       generateTable('', tableData, startY);
     }
 
-    doc.save(`Form44${is44a ? 'a' : 'b'}_Register.pdf`);
+    const formPrefix = isForm43 ? 'Form43' : 'Form44';
+    doc.save(`${formPrefix}${is44a ? 'a' : 'b'}_Register.pdf`);
     setShowExportMenu(false);
   };
 
@@ -688,7 +705,25 @@ const Registers = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
-              Form 44b (Out-Turn)
+              Form 44b (Out-turn)
+            </button>
+            <button
+              onClick={() => setActiveForm('43a')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeForm === '43a'
+                ? 'border-forest-500 text-forest-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Form 43a (Self In-Take)
+            </button>
+            <button
+              onClick={() => setActiveForm('43b')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeForm === '43b'
+                ? 'border-forest-500 text-forest-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Form 43b (Self Out-turn)
             </button>
           </nav>
         </div>
@@ -774,7 +809,7 @@ const Registers = () => {
                             </tr>
                           );
                         } else {
-                          const key = `${row.dateOfIssue}-${row.number}`;
+                          const key = row.batchId;
                           const isSame = lastKey === key;
                           lastKey = key;
                           return (

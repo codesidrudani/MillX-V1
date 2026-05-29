@@ -67,5 +67,6 @@ router.get("/reports/registers", authenticate, authorize(["admin", "report_viewe
 router.get("/superadmin/mills", authenticate, authorize(["superadmin"]), superadminController.getMills);
 router.post("/superadmin/mills", authenticate, authorize(["superadmin"]), superadminController.createMill);
 router.put("/superadmin/mills/:id/status", authenticate, authorize(["superadmin"]), superadminController.updateMillStatus);
+router.put("/superadmin/users/:userId/password", authenticate, authorize(["superadmin"]), superadminController.updateAdminPassword);
 
 module.exports = router;

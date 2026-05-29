@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { Building2, Plus, Snowflake, CheckCircle, Users, X } from 'lucide-react';
+import { Building2, Plus, Snowflake, CheckCircle, Users, X, Key } from 'lucide-react';
 
 const SuperAdminDashboard = () => {
   const [mills, setMills] = useState([]);
@@ -8,6 +8,8 @@ const SuperAdminDashboard = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  
+  const [passwordModal, setPasswordModal] = useState({ isOpen: false, user: null, millName: '', newPassword: '', loading: false, error: '' });
 
   const [form, setForm] = useState({
     millName: '',
@@ -53,6 +55,21 @@ const SuperAdminDashboard = () => {
       fetchMills();
     } catch (err) {
       console.error('Failed to update mill status', err);
+    }
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    if (!passwordModal.newPassword) return;
+    setPasswordModal(prev => ({ ...prev, loading: true, error: '' }));
+    try {
+      await api.put(`/superadmin/users/${passwordModal.user.id}/password`, {
+        newPassword: passwordModal.newPassword
+      });
+      setPasswordModal({ isOpen: false, user: null, millName: '', newPassword: '', loading: false, error: '' });
+      // Optionally show a success toast here
+    } catch (err) {
+      setPasswordModal(prev => ({ ...prev, loading: false, error: err.response?.data?.error || 'Failed to update password' }));
     }
   };
 
@@ -120,6 +137,7 @@ const SuperAdminDashboard = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Mill Name</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Address</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Admins</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Users</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Status</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Created</th>
@@ -138,6 +156,21 @@ const SuperAdminDashboard = () => {
                 <tr key={mill.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{mill.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{mill.address || '—'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    {mill.users && mill.users.map(u => (
+                      <div key={u.id} className="flex items-center space-x-2 py-1">
+                        <span className="font-medium">{u.name}</span>
+                        <span className="text-gray-400">({u.email})</span>
+                        <button 
+                          onClick={() => setPasswordModal({ isOpen: true, user: u, millName: mill.name, newPassword: '', loading: false, error: '' })} 
+                          className="p-1 text-forest-600 hover:bg-forest-50 rounded transition-colors" 
+                          title="Edit Password"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-700">
                     <span className="inline-flex items-center space-x-1">
                       <Users className="w-4 h-4" />
@@ -234,6 +267,51 @@ const SuperAdminDashboard = () => {
                 className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white bg-forest-600 hover:bg-forest-700 transition-colors ${creating ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {creating ? 'Creating...' : 'Create Mill & Admin'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Password Modal */}
+      {passwordModal.isOpen && passwordModal.user && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+            <div className="flex justify-between items-center px-6 py-4 border-b">
+              <h3 className="text-lg font-bold text-gray-900">Update Password</h3>
+              <button onClick={() => setPasswordModal({ isOpen: false, user: null, millName: '', newPassword: '', loading: false, error: '' })} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordUpdate} className="p-6 space-y-5">
+              {passwordModal.error && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
+                  <p className="text-sm text-red-700">{passwordModal.error}</p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm text-gray-500 mb-1">User: <span className="font-medium text-gray-900">{passwordModal.user.name}</span></p>
+                <p className="text-sm text-gray-500 mb-4">Mill: <span className="font-medium text-gray-900">{passwordModal.millName}</span></p>
+                
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter new password"
+                  value={passwordModal.newPassword}
+                  onChange={(e) => setPasswordModal({ ...passwordModal, newPassword: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-forest-500 focus:border-forest-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">This will immediately overwrite their existing password.</p>
+              </div>
+
+              <button
+                type="submit" disabled={passwordModal.loading}
+                className={`w-full py-2.5 px-4 rounded-lg text-sm font-medium text-white bg-forest-600 hover:bg-forest-700 transition-colors ${passwordModal.loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {passwordModal.loading ? 'Updating...' : 'Update Password'}
               </button>
             </form>
           </div>

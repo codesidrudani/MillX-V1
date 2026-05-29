@@ -6,7 +6,11 @@ const getMills = async (req, res) => {
   try {
     const mills = await prisma.mill.findMany({
       include: {
-        _count: { select: { users: true } }
+        _count: { select: { users: true } },
+        users: {
+          where: { role: 'admin' },
+          select: { id: true, name: true, email: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -82,8 +86,37 @@ const updateMillStatus = async (req, res) => {
   }
 };
 
+const updateAdminPassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ error: "New password is required" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+    if (!user || user.role === 'superadmin') {
+      return res.status(403).json({ error: "Cannot modify this user" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: parseInt(userId) },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error updating admin password:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   getMills,
   createMill,
   updateMillStatus,
+  updateAdminPassword,
 };

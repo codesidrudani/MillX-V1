@@ -1,0 +1,34 @@
+{
+  "name": "millx-desktop",
+  "version": "1.0.0",
+  "description": "MillX Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.millx.desktop",
+    "productName": "MillX",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "backend/**/*",
+      "frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/prisma",
+        "to": "prisma",
+        "filter": ["**/*"]
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

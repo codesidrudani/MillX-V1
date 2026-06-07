@@ -16,16 +16,26 @@
     },
     "files": [
       "main.js",
-      "backend/**/*",
-      "frontend/dist/**/*"
+      "loading.html"
     ],
     "extraResources": [
       {
-        "from": "backend/prisma",
-        "to": "prisma",
+        "from": "backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist",
         "filter": ["**/*"]
       }
-    ]
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "include": "installer.nsh",
+      "deleteAppDataOnUninstall": true
+    }
   },
   "devDependencies": {
     "electron": "^30.0.0",

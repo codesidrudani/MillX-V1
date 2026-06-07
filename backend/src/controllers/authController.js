@@ -30,7 +30,7 @@ const login = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "millx_offline_secret_key_2026",
       { expiresIn: "1d" }
     );
 
@@ -50,7 +50,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error: " + error.message });
   }
 };
 

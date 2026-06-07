@@ -25,7 +25,10 @@ const frontendDistPath = path.join(__dirname, "../../frontend/dist");
 app.use(express.static(frontendDistPath));
 
 // Catch-all route for React Router
-app.get("*", (req, res) => {
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
   res.sendFile(path.join(frontendDistPath, "index.html"));
 });
 
@@ -36,9 +39,25 @@ app.listen(PORT, async () => {
     await prisma.$connect();
     console.log("Connected to the database");
     
-    // Seed default admin account on start if no users exist
-    const userCount = await prisma.user.count();
-    if (userCount === 0) {
+    // Seed default superadmin account on start if it doesn't exist
+    const superadminExists = await prisma.user.findUnique({ where: { email: "superadmin@millx.com" } });
+    if (!superadminExists) {
+      const bcrypt = require("bcryptjs");
+      const hashedPassword = await bcrypt.hash("SuperAdmin@123", 10);
+      await prisma.user.create({
+        data: {
+          name: "Super Admin",
+          email: "superadmin@millx.com",
+          password: hashedPassword,
+          role: "superadmin",
+        },
+      });
+      console.log("Default superadmin account seeded: superadmin@millx.com / SuperAdmin@123");
+    }
+
+    // Seed default admin account on start if it doesn't exist
+    const adminExists = await prisma.user.findUnique({ where: { email: "admin@millx.com" } });
+    if (!adminExists) {
       const bcrypt = require("bcryptjs");
       const hashedPassword = await bcrypt.hash("Admin@1234", 10);
       await prisma.user.create({

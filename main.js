@@ -1,11 +1,37 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
+const fs = require('fs');
 
 let mainWindow;
 let serverProcess;
 
-function createWindow() {
+function updateStatus(msg) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(`document.getElementById('status').innerText = ${JSON.stringify(msg)};`).catch(() => { });
+  }
+}
+
+function appendLog(msg, isError = false) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.executeJavaScript(`
+      var logs = document.getElementById('logs');
+      if (logs) {
+        var l = document.createElement('div');
+        l.innerText = ${JSON.stringify(msg)};
+        if (${isError}) {
+          l.style.color = '#ef4444';
+          document.getElementById('spinner').style.borderTopColor = '#ef4444';
+          document.getElementById('status').innerText = "An error occurred during startup.";
+        }
+        logs.appendChild(l);
+        logs.scrollTop = logs.scrollHeight;
+      }
+    `).catch(() => { });
+  }
+}
+
+function createWindow(port) {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -15,17 +41,15 @@ function createWindow() {
     }
   });
 
-  // Wait a bit for the server to start, then load the local URL
-  // The Express server is hardcoded to use process.env.PORT || 5000 in your code
-  const port = 5000;
-  
-  // We can load a loading screen, but for simplicity we'll just poll the server
+  mainWindow.loadFile(path.join(__dirname, 'loading.html'));
+
   const checkServer = setInterval(() => {
     fetch(`http://localhost:${port}/health`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'ok') {
           clearInterval(checkServer);
+          updateStatus("Server ready. Loading application...");
           mainWindow.loadURL(`http://localhost:${port}`);
         }
       })
@@ -40,27 +64,74 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  // Start the backend Express server
-  const serverPath = path.join(__dirname, 'backend', 'src', 'index.js');
-  
-  serverProcess = fork(serverPath, [], {
-    cwd: path.join(__dirname, 'backend'),
-    env: {
-      ...process.env,
-      PORT: 5000,
-      NODE_ENV: 'production'
+  const port = 58302;
+  createWindow(port);
+
+  setTimeout(() => {
+    try {
+      updateStatus("Initializing database...");
+      const userDataPath = app.getPath('userData');
+      const dbDestPath = path.join(userDataPath, 'dev.db');
+
+      const backendDir = app.isPackaged
+        ? path.join(process.resourcesPath, 'backend')
+        : path.join(__dirname, 'backend');
+
+      if (!fs.existsSync(dbDestPath)) {
+        updateStatus("Copying fresh database to AppData...");
+        const dbSrcPath = path.join(backendDir, 'prisma', 'dev.db');
+
+        if (fs.existsSync(dbSrcPath)) {
+          fs.copyFileSync(dbSrcPath, dbDestPath);
+          appendLog("Database copied successfully to: " + dbDestPath);
+        } else {
+          appendLog("Warning: Source database not found at " + dbSrcPath, true);
+        }
+      } else {
+        appendLog("Using existing database at: " + dbDestPath);
+      }
+
+      updateStatus("Starting backend server...");
+      const serverPath = path.join(backendDir, 'src', 'index.js');
+      appendLog("Backend Path: " + serverPath);
+
+      serverProcess = fork(serverPath, [], {
+        cwd: backendDir,
+        silent: true, // Capture stdout and stderr
+        env: {
+          ...process.env,
+          PORT: port,
+          NODE_ENV: 'production',
+          DATABASE_URL: `file:${dbDestPath}`
+        }
+      });
+
+      serverProcess.stdout.on('data', (data) => {
+        appendLog(data.toString());
+      });
+
+      serverProcess.stderr.on('data', (data) => {
+        appendLog(data.toString(), true);
+      });
+
+      serverProcess.on('error', (err) => {
+        appendLog('Failed to start server process: ' + err.message, true);
+      });
+
+      serverProcess.on('exit', (code) => {
+        if (code !== 0) {
+          appendLog('Backend server exited unexpectedly with code ' + code, true);
+        }
+      });
+
+    } catch (e) {
+      appendLog("Startup exception: " + e.message, true);
     }
-  });
-
-  serverProcess.on('error', (err) => {
-    console.error('Failed to start server process.', err);
-  });
-
-  createWindow();
+  }, 1000); // Wait 1s so the loading screen renders first
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(port);
     }
   });
 });
@@ -72,7 +143,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  // Clean up the server process when the app closes
   if (serverProcess) {
     serverProcess.kill();
   }

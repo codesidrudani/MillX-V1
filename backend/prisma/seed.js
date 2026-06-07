@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 async function main() {
   const email = "superadmin@millx.com";
   const password = "SuperAdmin@123";
-  
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     console.log("Superadmin already exists:", email);
